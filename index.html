@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a2e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mediterraneum">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Mediterraneum · Suite de Gestión</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --vp:#1a2e1a;--vm:#2d4a2d;--mu:#4a7c59;
+  --do:#c9a84c;--dc:#e2c47a;--cr:#f5f0e8;--co:#ede5d0;
+  --nav-h:68px;--safe:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--vp);color:var(--cr);overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 30%,rgba(74,124,89,.15),transparent 55%),radial-gradient(ellipse at 80% 70%,rgba(201,168,76,.07),transparent 50%);pointer-events:none;z-index:0}
+
+/* ══ CAPAS PRINCIPALES ══ */
+.layer{display:none;position:fixed;inset:0;z-index:100;overflow-y:auto}
+.layer.visible{display:block}
+
+/* ══ SETUP (primera vez) ══ */
+#layer-setup{background:var(--vp);display:flex;align-items:center;justify-content:center;padding:20px}
+.setup-box{background:linear-gradient(135deg,#1e361e,#162816);border:1px solid rgba(201,168,76,.4);border-radius:20px;padding:32px;max-width:480px;width:100%;position:relative}
+.setup-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--do),transparent);border-radius:20px 20px 0 0}
+
+/* ══ LOGIN / REGISTER ══ */
+#layer-auth{background:var(--vp);display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-box{background:linear-gradient(135deg,#1e361e,#162816);border:1px solid rgba(201,168,76,.35);border-radius:20px;padding:36px;max-width:420px;width:100%;position:relative;overflow:hidden}
+.auth-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--do),transparent)}
+.auth-logo{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--cr);text-align:center;margin-bottom:4px}
+.auth-logo span{color:var(--do)}
+.auth-sub{font-size:12px;color:rgba(245,240,232,.4);text-align:center;letter-spacing:.2em;text-transform:uppercase;margin-bottom:28px}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:rgba(255,255,255,.04);border-radius:10px;padding:4px;margin-bottom:24px}
+.auth-tab{padding:10px;text-align:center;border-radius:8px;cursor:pointer;font-size:13px;color:rgba(245,240,232,.5);transition:all .2s}
+.auth-tab.active{background:rgba(201,168,76,.15);color:var(--dc);border:1px solid rgba(201,168,76,.25)}
+.auth-form{display:none}.auth-form.visible{display:block}
+.auth-field{margin-bottom:14px}
+.auth-field label{display:block;font-size:11px;letter-spacing:.15em;color:rgba(201,168,76,.7);text-transform:uppercase;margin-bottom:6px}
+.auth-field input{width:100%;background:#1a2f1a;border:none;border-radius:10px;padding:13px 16px;color:var(--cr);font-family:"DM Sans",sans-serif;font-size:14px;outline:none;transition:all .2s;box-shadow:inset 3px 3px 7px rgba(0,0,0,.45),inset -2px -2px 5px rgba(255,255,255,.06)}
+.auth-field input:focus{border-color:rgba(201,168,76,.5);background:rgba(255,255,255,.09)}
+.auth-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--do),#a8872e);color:var(--vp);border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:6px}
+.auth-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(201,168,76,.3)}
+.auth-btn:active{transform:scale(.98)}
+.auth-error{background:rgba(180,60,60,.2);border:1px solid rgba(180,60,60,.35);border-radius:8px;padding:10px 14px;font-size:13px;color:#e8a0a0;margin-top:12px;display:none}
+.auth-error.visible{display:block}
+
+/* ══ PENDIENTE ══ */
+#layer-pending{background:var(--vp);display:flex;align-items:center;justify-content:center;padding:20px}
+.pending-box{text-align:center;max-width:360px}
+.pending-icon{font-size:56px;margin-bottom:20px}
+.pending-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--cr);margin-bottom:8px}
+.pending-sub{font-size:14px;color:rgba(245,240,232,.5);line-height:1.7;margin-bottom:24px}
+.pending-email{font-size:13px;color:var(--dc);margin-bottom:20px}
+.btn-logout-pending{background:none;border:1px solid rgba(201,168,76,.25);color:rgba(245,240,232,.5);border-radius:10px;padding:10px 20px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer}
+
+/* ══ SIDEBAR ══ */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:260px;background:linear-gradient(180deg,rgba(26,46,26,.98),rgba(20,35,20,.99));border-right:1px solid rgba(201,168,76,.2);display:flex;flex-direction:column;z-index:200;padding-bottom:24px}
+.logo{padding:28px 28px 20px;border-bottom:1px solid rgba(201,168,76,.15);margin-bottom:8px}
+.logo-symbol{font-family:'Cormorant Garamond',serif;font-size:11px;letter-spacing:.3em;color:var(--do);text-transform:uppercase;margin-bottom:4px;opacity:.8}
+.logo-name{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;color:var(--cr);letter-spacing:.05em;line-height:1}
+.logo-name span{color:var(--do)}
+.logo-sub{font-size:10px;color:rgba(245,240,232,.4);letter-spacing:.15em;margin-top:3px;text-transform:uppercase}
+.nav-section{padding:8px 16px;flex:1;overflow-y:auto}
+.nav-label{font-size:10px;letter-spacing:.25em;color:rgba(201,168,76,.5);text-transform:uppercase;padding:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 16px;border-radius:10px;cursor:pointer;transition:all .2s;margin-bottom:4px;border:none}
+.nav-item:hover{box-shadow:3px 3px 8px rgba(0,0,0,.4),-2px -2px 5px rgba(255,255,255,.05);background:#1e341e}
+.nav-item.active{background:#1e341e;box-shadow:inset 3px 3px 7px rgba(0,0,0,.45),inset -1px -1px 4px rgba(255,255,255,.05),0 0 0 1px rgba(201,168,76,.3)}
+.nav-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;background:rgba(255,255,255,.05);flex-shrink:0}
+.nav-item.active .nav-icon{background:rgba(201,168,76,.2)}
+.nav-text{flex:1}
+.nav-text strong{display:block;font-size:13px;font-weight:500;color:var(--cr)}
+.nav-text span{font-size:11px;color:rgba(245,240,232,.4)}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--do);opacity:0;transition:opacity .25s}
+.nav-item.active .nav-dot{opacity:1}
+.sidebar-footer{padding:14px 20px;border-top:1px solid rgba(201,168,76,.1)}
+.user-chip{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.15);border-radius:10px;margin-bottom:10px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--mu),var(--do));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:white;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:12px;font-weight:500;color:var(--cr);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:10px;color:var(--do);letter-spacing:.08em;text-transform:uppercase}
+.btn-logout{width:100%;padding:9px;background:rgba(180,60,60,.15);border:1px solid rgba(180,60,60,.25);color:#e8a0a0;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s}
+.btn-logout:hover{background:rgba(180,60,60,.25)}
+
+/* ══ MAIN ══ */
+.main{margin-left:260px;min-height:100vh;position:relative;z-index:1}
+.topbar{padding:20px 36px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(201,168,76,.1);position:sticky;top:0;z-index:50;background:rgba(26,46,26,.95);backdrop-filter:blur(12px)}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--cr)}
+.page-title em{font-style:italic;color:var(--dc)}
+.date-chip{font-size:12px;color:rgba(245,240,232,.5);padding:6px 14px;border:1px solid rgba(201,168,76,.15);border-radius:20px}
+
+/* ══ MÓDULOS ══ */
+.module{display:none;padding:28px 36px 48px}
+.module.visible{display:block;animation:fadeUp .4s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══ CARDS ══ */
+.card{background:#1c321c;border:none;border-radius:16px;padding:24px;margin-bottom:20px;box-shadow:5px 5px 14px rgba(0,0,0,.5),-3px -3px 8px rgba(255,255,255,.05)}
+.card-gold{background:linear-gradient(135deg,#1f3620,#1a2e1a);box-shadow:5px 5px 14px rgba(0,0,0,.5),-3px -3px 8px rgba(255,255,255,.05),inset 0 0 0 1px rgba(201,168,76,.2)}
+.section-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;color:var(--cr);margin-bottom:18px}
+.section-title small{font-family:'DM Sans',sans-serif;font-size:11px;color:var(--do);letter-spacing:.2em;text-transform:uppercase;display:block;margin-bottom:4px}
+
+/* ══ FORM ══ */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.form-grid-3{grid-template-columns:1fr 1fr 1fr}
+.field{display:flex;flex-direction:column;gap:6px}
+.field.full{grid-column:1/-1}
+label{font-size:11px;letter-spacing:.12em;color:rgba(201,168,76,.7);text-transform:uppercase}
+input,select,textarea{
+  background:#1e351e;border:none;border-radius:10px;padding:11px 14px;
+  color:var(--cr);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;width:100%;
+  transition:all .2s;
+  box-shadow:inset 3px 3px 7px rgba(0,0,0,.45),inset -2px -2px 5px rgba(255,255,255,.06);
+}
+input:focus,select:focus,textarea:focus{
+  box-shadow:inset 4px 4px 8px rgba(0,0,0,.5),inset -2px -2px 5px rgba(255,255,255,.07),0 0 0 1px rgba(201,168,76,.4);
+}
+select option{background:var(--vp)}
+textarea{resize:vertical;min-height:80px}
+
+/* ══ BOTONES NEUMÓRFICOS ══ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 20px;border-radius:10px;border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  letter-spacing:.04em;transition:all .2s;touch-action:manipulation;
+}
+.btn-primary{
+  background:linear-gradient(145deg,#d4b055,#b8922a);color:var(--vp);width:100%;
+  box-shadow:4px 4px 10px rgba(0,0,0,.5),-2px -2px 6px rgba(255,255,255,.07),inset 0 1px 0 rgba(255,255,255,.15);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:5px 5px 14px rgba(0,0,0,.55),-2px -2px 6px rgba(255,255,255,.08),inset 0 1px 0 rgba(255,255,255,.15)}
+.btn-primary:active{transform:scale(.99);box-shadow:inset 3px 3px 8px rgba(0,0,0,.5),inset -1px -1px 4px rgba(255,255,255,.06)}
+.btn-secondary{
+  background:#1e351e;color:var(--cr);border:1px solid rgba(201,168,76,.12);
+  box-shadow:3px 3px 8px rgba(0,0,0,.45),-2px -2px 5px rgba(255,255,255,.06);
+}
+.btn-secondary:hover{transform:translateY(-1px);box-shadow:4px 4px 10px rgba(0,0,0,.5),-2px -2px 5px rgba(255,255,255,.07)}
+.btn-secondary:active{transform:scale(.99);box-shadow:inset 3px 3px 7px rgba(0,0,0,.45),inset -1px -1px 4px rgba(255,255,255,.05)}
+.btn-danger{
+  background:#1e2020;color:#e8a0a0;border:1px solid rgba(180,60,60,.2);
+  box-shadow:3px 3px 8px rgba(0,0,0,.45),-2px -2px 5px rgba(255,255,255,.04);
+}
+.btn-danger:active{transform:scale(.99);box-shadow:inset 3px 3px 7px rgba(0,0,0,.45)}
+.btn-success{
+  background:#1a3020;color:#7ec8a0;border:1px solid rgba(74,124,89,.25);
+  box-shadow:3px 3px 8px rgba(0,0,0,.45),-2px -2px 5px rgba(255,255,255,.05);
+}
+.btn-success:active{transform:scale(.99);box-shadow:inset 3px 3px 7px rgba(0,0,0,.45)}
+.btn-sm{padding:8px 14px;font-size:12px;width:auto}
+
+/* ══ AI OUTPUT ══ */
+.ai-output{background:linear-gradient(135deg,rgba(26,46,26,.8),rgba(45,74,45,.6));border:1px solid rgba(201,168,76,.25);border-radius:14px;padding:20px;margin-top:18px;display:none;position:relative;overflow:hidden}
+.ai-output::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--do),transparent)}
+.ai-output.visible{display:block;animation:fadeUp .4s ease}
+.ai-output-header{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:11px;letter-spacing:.2em;color:var(--do);text-transform:uppercase}
+.ai-output-body{font-size:13.5px;line-height:1.75;color:var(--co);white-space:pre-wrap}
+.ai-loading{display:flex;align-items:center;gap:12px;color:var(--dc);font-size:13px}
+.dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--do);animation:db 1.2s infinite;margin:0 2px}
+.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+@keyframes db{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+/* ══ KPI / GRIDS ══ */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px}
+.kpi-card{padding:20px 22px;border-radius:14px;background:#1c321c;border:none;box-shadow:5px 5px 12px rgba(0,0,0,.5),-3px -3px 7px rgba(255,255,255,.05)}
+.kpi-label{font-size:11px;letter-spacing:.15em;color:rgba(201,168,76,.6);text-transform:uppercase;margin-bottom:7px}
+.kpi-val{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--cr);line-height:1}
+.kpi-val span{font-size:14px;color:var(--dc)}
+.kpi-sub{font-size:11px;color:rgba(245,240,232,.4);margin-top:5px}
+.divider{height:1px;background:rgba(201,168,76,.1);margin:20px 0}
+
+/* ══ PRESUPUESTO TIPO ══ */
+.presupuesto-tipo{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.tipo-card{padding:16px;border-radius:12px;border:none;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;background:#1c321c;box-shadow:4px 4px 10px rgba(0,0,0,.45),-2px -2px 6px rgba(255,255,255,.05)}
+.tipo-card.selected{box-shadow:inset 3px 3px 8px rgba(0,0,0,.45),inset -1px -1px 4px rgba(255,255,255,.05),0 0 0 2px rgba(201,168,76,.5);background:#1f3520}
+.tipo-icon{font-size:22px}
+.tipo-label{font-size:13px;font-weight:500;color:var(--cr)}
+.tipo-desc{font-size:11px;color:rgba(245,240,232,.45);margin-top:2px}
+
+/* ══ LISTAS ══ */
+.scroll-list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto;margin-bottom:16px}
+.scroll-list::-webkit-scrollbar{width:3px}.scroll-list::-webkit-scrollbar-thumb{background:rgba(201,168,76,.3);border-radius:2px}
+.row-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:#1c321c;border:none;transition:all .2s;box-shadow:3px 3px 8px rgba(0,0,0,.45),-2px -2px 5px rgba(255,255,255,.05)}
+.row-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--mu),var(--do));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:white;flex-shrink:0}
+.row-info{flex:1;min-width:0}
+.row-name{font-size:13px;font-weight:500;color:var(--cr);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-meta{font-size:11px;color:rgba(245,240,232,.45);margin-top:2px}
+.row-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.status-badge{padding:3px 9px;border-radius:20px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;white-space:nowrap}
+.s-activo{background:rgba(74,124,89,.25);color:#7ec8a0;border:1px solid rgba(74,124,89,.4)}
+.s-pendiente{background:rgba(201,168,76,.2);color:var(--dc);border:1px solid rgba(201,168,76,.35)}
+.s-revisar{background:rgba(180,60,60,.2);color:#e8a0a0;border:1px solid rgba(180,60,60,.35)}
+.s-admin{background:rgba(201,168,76,.25);color:var(--dc);border:1px solid rgba(201,168,76,.4)}
+.s-empleado{background:rgba(74,124,89,.2);color:#7ec8a0;border:1px solid rgba(74,124,89,.35)}
+.s-espera{background:rgba(100,100,100,.2);color:rgba(245,240,232,.5);border:1px solid rgba(100,100,100,.3)}
+
+/* ══ MAQUINARIA ══ */
+.maq-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.maq-card{padding:18px;border-radius:14px;background:#1c321c;border:none;transition:all .2s;box-shadow:4px 4px 10px rgba(0,0,0,.48),-2px -2px 6px rgba(255,255,255,.05)}
+.maq-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.maq-icon{font-size:26px}
+.maq-alerta{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:500}
+.a-ok{background:rgba(74,124,89,.25);color:#7ec8a0}
+.a-pronto{background:rgba(201,168,76,.2);color:var(--dc)}
+.a-urgente{background:rgba(180,60,60,.25);color:#e8a0a0}
+.maq-name{font-size:13px;font-weight:500;color:var(--cr);margin-bottom:3px}
+.maq-meta{font-size:11px;color:rgba(245,240,232,.45)}
+.prog-bar{height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:10px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px}
+.f-ok{background:linear-gradient(90deg,var(--mu),#7ec8a0)}
+.f-pronto{background:linear-gradient(90deg,#a8872e,var(--do))}
+.f-urgente{background:linear-gradient(90deg,#8b2020,#e8a0a0)}
+
+/* ══ RUTAS ══ */
+.ruta-card{padding:16px 18px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.12);display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.ruta-color{width:4px;align-self:stretch;border-radius:2px;flex-shrink:0}
+.ruta-info{flex:1;min-width:0}
+.ruta-name{font-size:13px;font-weight:500;color:var(--cr)}
+.ruta-sub{font-size:11px;color:rgba(245,240,232,.5);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ruta-stats{display:flex;gap:14px;text-align:right;flex-shrink:0}
+.stat-val{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--dc)}
+.stat-lbl{font-size:10px;color:rgba(245,240,232,.4);letter-spacing:.1em;text-transform:uppercase}
+
+/* ══ PRESUP LISTA ══ */
+.presup-row{padding:14px 18px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.1);margin-bottom:8px}
+.presup-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.presup-cliente{font-size:14px;font-weight:500;color:var(--cr)}
+.presup-meta{font-size:12px;color:rgba(245,240,232,.5)}
+.presup-fecha{font-size:11px;color:rgba(245,240,232,.35);margin-top:4px}
+.pb-nuevo{background:rgba(74,124,89,.25);color:#7ec8a0;border:1px solid rgba(74,124,89,.4);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.pb-mantenimiento{background:rgba(201,168,76,.2);color:var(--dc);border:1px solid rgba(201,168,76,.35);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+
+/* ══ ADMIN PANEL ══ */
+.admin-user-card{background:#1c321c;border:none;border-radius:14px;padding:20px;margin-bottom:14px;box-shadow:5px 5px 12px rgba(0,0,0,.48),-3px -3px 7px rgba(255,255,255,.05)}
+.admin-user-header{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.admin-user-info{flex:1}
+.admin-user-name{font-size:15px;font-weight:500;color:var(--cr);margin-bottom:3px}
+.admin-user-email{font-size:12px;color:rgba(245,240,232,.45)}
+.permisos-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.permiso-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.1);cursor:pointer;transition:all .2s}
+.permiso-toggle.on{border-color:rgba(74,124,89,.5);background:rgba(74,124,89,.1)}
+.permiso-label{font-size:13px;color:var(--cr);display:flex;align-items:center;gap:8px}
+.toggle-switch{width:36px;height:20px;background:rgba(255,255,255,.1);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0}
+.toggle-switch::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;background:rgba(245,240,232,.5);border-radius:50%;transition:all .2s}
+.permiso-toggle.on .toggle-switch{background:rgba(74,124,89,.6)}
+.permiso-toggle.on .toggle-switch::after{left:19px;background:white}
+.chips-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chip{padding:6px 13px;border-radius:20px;font-size:11px;letter-spacing:.06em;border:1px solid rgba(201,168,76,.2);color:rgba(245,240,232,.6);cursor:pointer;transition:all .2s}
+.chip.active{border-color:var(--do);color:var(--dc);background:rgba(201,168,76,.08)}
+
+/* ══ MODAL ══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex;animation:fadeUp .3s ease}
+.modal{background:linear-gradient(135deg,#1e361e,#162816);border:1px solid rgba(201,168,76,.3);border-radius:18px;padding:28px;max-width:460px;width:100%;max-height:90vh;overflow-y:auto;position:relative}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--do),transparent);border-radius:18px 18px 0 0}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--cr);margin-bottom:20px}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:rgba(245,240,232,.4);font-size:20px;cursor:pointer}
+
+/* ══ TOAST ══ */
+.toast{position:fixed;bottom:calc(80px + var(--safe));left:50%;transform:translateX(-50%) translateY(20px);background:rgba(45,74,45,.97);border:1px solid rgba(201,168,76,.4);border-radius:12px;padding:12px 24px;font-size:13px;color:var(--cr);z-index:600;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ══ SKELETON ══ */
+.skeleton{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;height:52px;margin-bottom:8px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ══ MOBILE ══ */
+.mobile-topbar{display:none;position:sticky;top:0;z-index:100;padding:14px 20px 10px;background:rgba(26,46,26,.97);backdrop-filter:blur(12px);border-bottom:1px solid rgba(201,168,76,.12);align-items:center;justify-content:space-between}
+.mobile-logo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300;color:var(--cr)}
+.mobile-logo span{color:var(--do)}
+.mobile-user{display:flex;align-items:center;gap:8px}
+.mobile-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--mu),var(--do));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:white}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:calc(var(--nav-h) + var(--safe));background:rgba(20,35,20,.97);backdrop-filter:blur(16px);border-top:1px solid rgba(201,168,76,.2);z-index:200;padding-bottom:var(--safe)}
+.bottom-nav-inner{display:grid;height:var(--nav-h)}
+.bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:all .2s;padding:8px 4px;position:relative}
+.bnav-item::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:0;height:2px;background:var(--do);border-radius:1px;transition:width .25s}
+.bnav-item.active::after{width:24px}
+.bnav-icon{font-size:20px;transition:transform .2s}
+.bnav-item.active .bnav-icon{transform:scale(1.15)}
+.bnav-label{font-size:10px;color:rgba(245,240,232,.5);transition:color .2s}
+.bnav-item.active .bnav-label{color:var(--dc)}
+
+/* Ruta del día (solo lectura para empleados) */
+.ruta-hoy-card{border:2px solid rgba(201,168,76,.3);border-radius:16px;padding:24px;background:linear-gradient(135deg,rgba(201,168,76,.08),rgba(74,124,89,.05));margin-bottom:20px;position:relative;overflow:hidden}
+.ruta-hoy-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--do),transparent)}
+.ruta-hoy-title{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--cr);margin-bottom:4px}
+.ruta-hoy-fecha{font-size:12px;color:rgba(201,168,76,.7);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+.ruta-hoy-content{font-size:13.5px;line-height:1.8;color:var(--co);white-space:pre-wrap}
+.ruta-hoy-empty{text-align:center;padding:32px 20px;color:rgba(245,240,232,.4)}
+.ruta-hoy-empty .icon{font-size:40px;margin-bottom:12px}
+.ruta-hoy-empty p{font-size:14px}
+
+@media(max-width:768px){
+  .sidebar{display:none}.main{margin-left:0;padding-bottom:calc(var(--nav-h) + var(--safe))}.topbar{display:none}.mobile-topbar{display:flex}.bottom-nav{display:block}
+  .module{padding:16px 16px 28px}.grid-2{grid-template-columns:1fr;gap:14px}.grid-3{grid-template-columns:1fr 1fr;gap:12px}.form-grid{grid-template-columns:1fr}.form-grid-3{grid-template-columns:1fr 1fr}.maq-grid{grid-template-columns:1fr 1fr}.presupuesto-tipo{grid-template-columns:1fr 1fr}
+  .kpi-val{font-size:28px}.card{padding:18px}.permisos-grid{grid-template-columns:1fr}
+  .toast{bottom:calc(var(--nav-h) + var(--safe) + 12px)}
+}
+@media(max-width:420px){.grid-3{grid-template-columns:1fr}.maq-grid{grid-template-columns:1fr}.form-grid-3{grid-template-columns:1fr}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(201,168,76,.2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP (primera vez) ══ -->
+<div id="layer-setup" class="layer" style="display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="setup-box">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--cr);margin-bottom:4px">Medi<span style="color:var(--do)">terra</span>neum</div>
+    <div style="font-size:12px;color:rgba(245,240,232,.4);letter-spacing:.2em;text-transform:uppercase;margin-bottom:22px">Configuración inicial</div>
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.15);border-radius:12px;padding:16px;margin-bottom:20px">
+      <p style="font-size:12.5px;color:rgba(245,240,232,.6);line-height:2">
+        <strong style="color:var(--cr)">1.</strong> Ve a <a href="https://supabase.com" target="_blank" style="color:var(--dc)">supabase.com</a> → crea proyecto gratis<br>
+        <strong style="color:var(--cr)">2.</strong> <em>SQL Editor → New query</em> → pega <code style="background:rgba(201,168,76,.15);padding:1px 6px;border-radius:4px;font-size:11px;color:var(--dc)">supabase_schema.sql</code> → Run<br>
+        <strong style="color:var(--cr)">3.</strong> <em>Project Settings → API</em> → copia URL y Anon Key<br>
+        <strong style="color:var(--cr)">4.</strong> <em>Authentication → Users → Add user</em> → crea tu usuario admin
+      </p>
+    </div>
+    <div class="auth-field"><label>Supabase Project URL</label><input type="url" id="cfg-url" placeholder="https://xxxx.supabase.co"></div>
+    <div class="auth-field" style="margin-top:12px"><label>Anon / Public Key</label><input type="text" id="cfg-key" placeholder="eyJhbGci..."></div>
+    <button class="auth-btn" style="margin-top:16px" onclick="guardarConfig()">⚡ Guardar y continuar</button>
+  </div>
+</div>
+
+<!-- ══ LOGIN / REGISTRO ══ -->
+<div id="layer-auth" class="layer" style="display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="auth-box">
+    <div class="auth-logo">Medi<span>terra</span>neum</div>
+    <div class="auth-sub">Suite de Gestión</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="cambiarTab('login')">Entrar</div>
+      <div class="auth-tab" id="tab-register" onclick="cambiarTab('register')">Registrarse</div>
+    </div>
+    <!-- LOGIN -->
+    <div class="auth-form visible" id="form-login">
+      <div class="auth-field"><label>Email</label><input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email"></div>
+      <div class="auth-field" style="margin-top:12px"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="auth-btn" style="margin-top:16px" onclick="doLogin()">Entrar</button>
+      <div class="auth-error" id="login-error"></div>
+    </div>
+    <!-- REGISTRO -->
+    <div class="auth-form" id="form-register">
+      <div class="auth-field"><label>Nombre completo</label><input type="text" id="reg-nombre" placeholder="Tu nombre"></div>
+      <div class="auth-field" style="margin-top:12px"><label>Email</label><input type="email" id="reg-email" placeholder="tu@email.com" autocomplete="email"></div>
+      <div class="auth-field" style="margin-top:12px"><label>Contraseña</label><input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+      <button class="auth-btn" style="margin-top:16px" onclick="doRegister()">Crear cuenta</button>
+      <div style="margin-top:12px;font-size:12px;color:rgba(245,240,232,.4);text-align:center;line-height:1.6">Tu cuenta quedará pendiente de aprobación.<br>El administrador te activará y asignará permisos.</div>
+      <div class="auth-error" id="reg-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PENDIENTE DE APROBACIÓN ══ -->
+<div id="layer-pending" class="layer" style="display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="pending-box">
+    <div class="pending-icon">⏳</div>
+    <div class="pending-title">Cuenta pendiente</div>
+    <div class="pending-sub">Tu cuenta ha sido creada correctamente.<br>El administrador debe activarla y asignarte permisos antes de que puedas acceder.</div>
+    <div class="pending-email" id="pending-email-txt"></div>
+    <button class="btn-logout-pending" onclick="doLogout()">Cerrar sesión</button>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="layer-app" class="layer" style="display:none;position:relative">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="logo">
+      <div class="logo-symbol">· Suite IA ·</div>
+      <div class="logo-name">Medi<span>terra</span>neum</div>
+      <div class="logo-sub">Gestión Inteligente</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Módulos</div>
+      <div class="nav-item active" id="nav-presupuestos" onclick="goTo('presupuestos',this)"><div class="nav-icon">🌿</div><div class="nav-text"><strong>Presupuestos IA</strong><span>Nuevo jardín · Mantenimiento</span></div><div class="nav-dot"></div></div>
+      <div class="nav-item" id="nav-crm" onclick="goTo('crm',this)"><div class="nav-icon">🤝</div><div class="nav-text"><strong>CRM Clientes</strong><span>Seguimiento · Alertas</span></div><div class="nav-dot"></div></div>
+      <div class="nav-item" id="nav-maquinaria" onclick="goTo('maquinaria',this)"><div class="nav-icon">⚙️</div><div class="nav-text"><strong>Maquinaria</strong><span>Vehículos · Estado</span></div><div class="nav-dot"></div></div>
+      <div class="nav-item" id="nav-rutas" onclick="goTo('rutas',this)"><div class="nav-icon">🗺️</div><div class="nav-text"><strong>Rutas y Cuadrillas</strong><span>Planificación diaria</span></div><div class="nav-dot"></div></div>
+      <div class="nav-item" id="nav-admin" onclick="goTo('admin',this)" style="display:none"><div class="nav-icon">👑</div><div class="nav-text"><strong>Administración</strong><span>Usuarios · Permisos</span></div><div class="nav-dot"></div></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="sb-avatar">?</div>
+        <div class="user-info"><div class="user-name" id="sb-nombre">—</div><div class="user-role" id="sb-rol">—</div></div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
+      <button style="width:100%;padding:7px;margin-top:6px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:var(--dc);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;letter-spacing:.05em" onclick="configurarAPIKey()">⚙️ API Key IA</button>
+    </div>
+  </nav>
+
+  <!-- MOBILE TOPBAR -->
+  <div class="mobile-topbar">
+    <div class="mobile-logo">Mediter<span>raneum</span></div>
+    <div class="mobile-user">
+      <div class="mobile-avatar" id="mob-avatar">?</div>
+      <button style="background:none;border:none;color:rgba(245,240,232,.4);font-size:18px;cursor:pointer;padding:4px" onclick="doLogout()">⏻</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="page-title" id="pageTitle">Presupuestos <em>Inteligentes</em></div>
+      <div class="date-chip" id="dateChip"></div>
+    </div>
+
+    <!-- ═══ MÓDULO PRESUPUESTOS ═══ -->
+    <div class="module visible" id="mod-presupuestos">
+      <div class="grid-3">
+        <div class="kpi-card"><div class="kpi-label">Guardados</div><div class="kpi-val" id="kpi-p-total">—</div><div class="kpi-sub">En base de datos</div></div>
+        <div class="kpi-card"><div class="kpi-label">Aceptados</div><div class="kpi-val" id="kpi-p-acep">—</div><div class="kpi-sub">Firmados</div></div>
+        <div class="kpi-card"><div class="kpi-label">Pendientes</div><div class="kpi-val" id="kpi-p-pend">—</div><div class="kpi-sub">Sin respuesta</div></div>
+      </div>
+      <div class="card">
+        <div class="section-title"><small>Generador con IA</small>Nuevo Presupuesto</div>
+        <div class="presupuesto-tipo">
+          <div class="tipo-card selected" id="tipo-nuevo" onclick="selTipo('nuevo')"><div class="tipo-icon">🌱</div><div><div class="tipo-label">Jardín Nuevo</div><div class="tipo-desc">Diseño y plantación</div></div></div>
+          <div class="tipo-card" id="tipo-mant" onclick="selTipo('mant')"><div class="tipo-icon">✂️</div><div><div class="tipo-label">Mantenimiento</div><div class="tipo-desc">Contrato periódico</div></div></div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>Cliente</label><input type="text" id="p-cliente" placeholder="Ej. Familia Gómez"></div>
+          <div class="field"><label>Localidad</label><input type="text" id="p-localidad" placeholder="Ej. Alicante"></div>
+          <div class="field"><label>Superficie (m²)</label><input type="number" id="p-metros" placeholder="Ej. 250" inputmode="numeric"></div>
+          <div class="field"><label>Terreno</label><select id="p-terreno"><option value="">Seleccionar...</option><option>Llano sin vegetación</option><option>Con vegetación existente</option><option>Pendiente suave</option><option>Pendiente pronunciada</option><option>Mixto</option></select></div>
+          <div class="field full"><label>Descripción / Necesidades</label><textarea id="p-desc" placeholder="Ej. Zona de césped, riego automático, plantas mediterráneas..."></textarea></div>
+        </div>
+        <div id="campos-nuevo">
+          <div class="form-grid form-grid-3">
+            <div class="field"><label>Estilo</label><select id="p-estilo"><option value="">Estilo...</option><option>Mediterráneo</option><option>Minimalista</option><option>Natural</option><option>Formal</option><option>Moderno</option></select></div>
+            <div class="field"><label>Riego</label><select id="p-riego"><option value="">Riego...</option><option>No necesario</option><option>Goteo</option><option>Aspersión</option><option>Mixto</option></select></div>
+            <div class="field"><label>Urgencia</label><select id="p-urgencia"><option>Sin prisa</option><option>1-2 meses</option><option>Menos de 1 mes</option><option>Urgente</option></select></div>
+          </div>
+        </div>
+        <div id="campos-mant" style="display:none">
+          <div class="form-grid form-grid-3">
+            <div class="field"><label>Frecuencia</label><select id="p-freq"><option>Semanal</option><option>Quincenal</option><option>Mensual</option></select></div>
+            <div class="field"><label>Estado actual</label><select id="p-estado"><option>Bueno</option><option>Regular</option><option>Descuidado</option></select></div>
+            <div class="field"><label>¿Incluye riego?</label><select id="p-riego-m"><option>No</option><option>Revisión básica</option><option>Mantenimiento completo</option></select></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <button class="btn btn-primary" onclick="generarPresupuesto()">✨ Generar presupuesto con IA</button>
+        <div class="ai-output" id="pres-output">
+          <div class="ai-output-header"><span>✦</span> Resultado · IA</div>
+          <div class="ai-output-body" id="pres-texto"></div>
+          <div style="margin-top:16px"><button class="btn btn-secondary btn-sm" onclick="guardarPresupuesto()">💾 Guardar en base de datos</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title"><small>Historial</small>Presupuestos guardados</div>
+        <div id="pres-lista"><div class="skeleton"></div><div class="skeleton"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ MÓDULO CRM ═══ -->
+    <div class="module" id="mod-crm">
+      <div class="grid-3">
+        <div class="kpi-card"><div class="kpi-label">Total</div><div class="kpi-val" id="kpi-c-total">—</div><div class="kpi-sub">Clientes en BD</div></div>
+        <div class="kpi-card"><div class="kpi-label">Activos</div><div class="kpi-val" id="kpi-c-act">—</div><div class="kpi-sub">Servicio activo</div></div>
+        <div class="kpi-card"><div class="kpi-label">Revisar</div><div class="kpi-val" id="kpi-c-rev">—</div><div class="kpi-sub">Requieren atención</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title"><small>Base de datos</small>Clientes</div>
+          <div class="chips-row">
+            <div class="chip active" onclick="filtrarCli('todos',this)">Todos</div>
+            <div class="chip" onclick="filtrarCli('activo',this)">Activos</div>
+            <div class="chip" onclick="filtrarCli('pendiente',this)">Pendientes</div>
+            <div class="chip" onclick="filtrarCli('revisar',this)">Revisar</div>
+          </div>
+          <div class="scroll-list" id="cli-list"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+          <button class="btn btn-secondary btn-sm" onclick="abrirModal('modal-cliente')">+ Añadir cliente</button>
+        </div>
+        <div class="card">
+          <div class="section-title"><small>Asistente IA</small>Análisis</div>
+          <div class="field" style="margin-bottom:12px"><label>Cliente</label><select id="crm-sel"><option value="">— Elige un cliente —</option></select></div>
+          <div class="field" style="margin-bottom:18px"><label>Análisis</label>
+            <select id="crm-accion"><option>Historial y próximas acciones</option><option>Oportunidad de upsell</option><option>Mensaje de seguimiento</option><option>Análisis de rentabilidad</option></select>
+          </div>
+          <button class="btn btn-primary" onclick="analizarCliente()">✨ Analizar con IA</button>
+          <div class="ai-output" id="crm-output"><div class="ai-output-header"><span>✦</span> Análisis · IA</div><div class="ai-output-body" id="crm-texto"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MÓDULO MAQUINARIA ═══ -->
+    <div class="module" id="mod-maquinaria">
+      <div class="grid-3">
+        <div class="kpi-card"><div class="kpi-label">Total activos</div><div class="kpi-val" id="kpi-m-total">—</div><div class="kpi-sub">Máquinas y vehículos</div></div>
+        <div class="kpi-card"><div class="kpi-label">Urgentes</div><div class="kpi-val" id="kpi-m-urg">—</div><div class="kpi-sub">Mantenimiento inmediato</div></div>
+        <div class="kpi-card"><div class="kpi-label">Operativos</div><div class="kpi-val" id="kpi-m-ok">—</div><div class="kpi-sub">Buen estado</div></div>
+      </div>
+      <div class="card">
+        <div class="section-title"><small>Estado de flota</small>Maquinaria y Vehículos</div>
+        <div class="maq-grid" id="maq-grid"><div class="skeleton" style="height:120px"></div><div class="skeleton" style="height:120px"></div><div class="skeleton" style="height:120px"></div></div>
+        <div id="maq-add-btn"><button class="btn btn-secondary btn-sm" onclick="abrirModal('modal-maquina')">+ Añadir activo</button></div>
+      </div>
+      <div class="card card-gold">
+        <div class="section-title"><small>Predicción IA</small>Consultar Mantenimiento</div>
+        <div class="form-grid">
+          <div class="field"><label>Activo</label><select id="maq-sel"><option value="">Cargando...</option></select></div>
+          <div class="field"><label>Horas / km actuales</label><input type="number" id="maq-horas" placeholder="Ej. 340" inputmode="numeric"></div>
+          <div class="field"><label>Último mantenimiento</label><input type="date" id="maq-fecha"></div>
+          <div class="field"><label>Síntoma (opcional)</label><input type="text" id="maq-sintoma" placeholder="Ej. vibración, humo..."></div>
+        </div>
+        <button class="btn btn-primary" onclick="consultarMaq()">✨ Predecir mantenimiento</button>
+        <div class="ai-output" id="maq-output"><div class="ai-output-header"><span>✦</span> Predicción · IA</div><div class="ai-output-body" id="maq-texto"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ MÓDULO RUTAS ═══ -->
+    <div class="module" id="mod-rutas">
+      <!-- Vista empleado: solo ve la ruta de hoy -->
+      <div id="rutas-empleado" style="display:none">
+        <div class="ruta-hoy-card" id="ruta-hoy-card">
+          <div class="ruta-hoy-title">📋 Tu ruta de hoy</div>
+          <div class="ruta-hoy-fecha" id="ruta-hoy-fecha"></div>
+          <div id="ruta-hoy-content">
+            <div class="ruta-hoy-empty"><div class="icon">🗺️</div><p>No hay ruta planificada para hoy.<br>Consulta con tu responsable.</p></div>
+          </div>
+        </div>
+      </div>
+      <!-- Vista admin: planificador completo -->
+      <div id="rutas-admin" style="display:none">
+        <div class="grid-3">
+          <div class="kpi-card"><div class="kpi-label">Rutas guardadas</div><div class="kpi-val" id="kpi-r-total">—</div><div class="kpi-sub">Histórico</div></div>
+          <div class="kpi-card"><div class="kpi-label">Empleados</div><div class="kpi-val" id="kpi-r-emp">—</div><div class="kpi-sub">Disponibles</div></div>
+          <div class="kpi-card"><div class="kpi-label">Hoy</div><div class="kpi-val" id="kpi-r-hoy">—</div><div class="kpi-sub">Rutas de hoy</div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-title"><small>Historial</small>Rutas guardadas</div>
+            <div id="rutas-lista"><div class="skeleton"></div><div class="skeleton"></div></div>
+          </div>
+          <div class="card card-gold">
+            <div class="section-title"><small>Optimizador IA</small>Planificar Jornada</div>
+            <div class="form-grid">
+              <div class="field"><label>Empleados disponibles</label><input type="number" id="r-emp" placeholder="Ej. 4" inputmode="numeric"></div>
+              <div class="field"><label>Vehículos disponibles</label><input type="number" id="r-veh" placeholder="Ej. 2" inputmode="numeric"></div>
+              <div class="field full"><label>Trabajos del día</label><textarea id="r-trabajos" placeholder="Ej. Mantenimiento Familia López en Elche, Poda Comunidad El Pinar..."></textarea></div>
+              <div class="field"><label>Base de salida</label><input type="text" id="r-base" placeholder="Ej. Elche"></div>
+              <div class="field"><label>Hora de inicio</label><input type="time" id="r-hora" value="07:30"></div>
+            </div>
+            <button class="btn btn-primary" onclick="planificarRuta()">✨ Optimizar con IA</button>
+            <div class="ai-output" id="ruta-output">
+              <div class="ai-output-header"><span>✦</span> Plan optimizado · IA</div>
+              <div class="ai-output-body" id="ruta-texto"></div>
+              <div style="margin-top:16px"><button class="btn btn-secondary btn-sm" onclick="guardarRuta()">💾 Guardar ruta del día</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MÓDULO ADMIN ═══ -->
+    <div class="module" id="mod-admin">
+      <div class="grid-3">
+        <div class="kpi-card"><div class="kpi-label">Usuarios totales</div><div class="kpi-val" id="kpi-a-total">—</div><div class="kpi-sub">Registrados</div></div>
+        <div class="kpi-card"><div class="kpi-label">Activos</div><div class="kpi-val" id="kpi-a-act">—</div><div class="kpi-sub">Con acceso</div></div>
+        <div class="kpi-card"><div class="kpi-label">Pendientes</div><div class="kpi-val" id="kpi-a-pend">—</div><div class="kpi-sub">Esperando aprobación</div></div>
+      </div>
+      <div class="card">
+        <div class="section-title"><small>Panel de administración</small>Usuarios y Permisos</div>
+        <div id="admin-users-list"><div class="skeleton"></div><div class="skeleton"></div></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner" id="bnav-inner">
+      <!-- generado por JS según permisos -->
+    </div>
+  </nav>
+
+</div><!-- fin layer-app -->
+
+<!-- MODALES -->
+<div class="modal-overlay" id="modal-cliente">
+  <div class="modal">
+    <button class="modal-close" onclick="cerrarModal('modal-cliente')">✕</button>
+    <div class="modal-title">Añadir Cliente</div>
+    <div class="field" style="margin-bottom:14px"><label>Nombre *</label><input type="text" id="mc-nombre" placeholder="Nombre del cliente o empresa"></div>
+    <div class="field" style="margin-bottom:14px"><label>Localidad</label><input type="text" id="mc-localidad" placeholder="Localidad"></div>
+    <div class="field" style="margin-bottom:14px"><label>Teléfono</label><input type="tel" id="mc-tel" placeholder="Teléfono de contacto"></div>
+    <div class="field" style="margin-bottom:14px"><label>Tipo de servicio</label><select id="mc-tipo"><option value="mantenimiento">Mantenimiento</option><option value="nuevo">Jardín nuevo</option></select></div>
+    <div class="field" style="margin-bottom:20px"><label>Notas</label><textarea id="mc-meta" placeholder="Frecuencia, condiciones especiales..."></textarea></div>
+    <button class="btn btn-primary" onclick="guardarCliente()">💾 Guardar cliente</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-maquina">
+  <div class="modal">
+    <button class="modal-close" onclick="cerrarModal('modal-maquina')">✕</button>
+    <div class="modal-title">Añadir Activo</div>
+    <div class="field" style="margin-bottom:14px"><label>Nombre *</label><input type="text" id="mm-nombre" placeholder="Ej. Desbrozadora Stihl FS56"></div>
+    <div class="field" style="margin-bottom:14px"><label>Tipo</label><select id="mm-tipo"><option value="maquina">Máquina</option><option value="vehiculo">Vehículo</option></select></div>
+    <div class="field" style="margin-bottom:14px"><label>Matrícula (si aplica)</label><input type="text" id="mm-mat" placeholder="Ej. AL-1234-BC"></div>
+    <div class="field" style="margin-bottom:14px"><label>Horas de uso</label><input type="number" id="mm-horas" placeholder="0" inputmode="numeric"></div>
+    <div class="field" style="margin-bottom:14px"><label>Estado</label><select id="mm-alerta"><option value="ok">OK — Buen estado</option><option value="pronto">Mantenimiento próximo</option><option value="urgente">Urgente</option></select></div>
+    <div class="field" style="margin-bottom:20px"><label>Notas</label><textarea id="mm-notas" placeholder="Notas adicionales..."></textarea></div>
+    <button class="btn btn-primary" onclick="guardarMaquina()">💾 Guardar activo</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL API KEY -->
+<div class="modal-overlay" id="modal-apikey">
+  <div class="modal">
+    <button class="modal-close" onclick="cerrarModal('modal-apikey')">✕</button>
+    <div class="modal-title">API Key · Anthropic</div>
+    <div style="font-size:12px;color:rgba(245,240,232,.45);margin-bottom:16px;line-height:1.6">
+      Introduce tu API key de <strong style="color:var(--dc)">console.anthropic.com</strong><br>
+      Empieza por <code style="background:rgba(201,168,76,.15);padding:2px 6px;border-radius:4px;font-size:11px">sk-ant-...</code>
+    </div>
+    <div class="field" style="margin-bottom:20px">
+      <label>API Key</label>
+      <input type="password" id="apikey-input" placeholder="sk-ant-api03-..." autocomplete="off">
+    </div>
+    <button class="btn btn-primary" onclick="guardarAPIKey()">💾 Guardar API Key</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════════════════════
+let sb = null;
+let sesionUser = null;
+let perfilUser = null; // {rol, permisos, nombre, ...}
+let todosClientes = [];
+let presupuestoActual = '';
+let rutaActual = '';
+let tipoActual = 'nuevo';
+
+const TITULOS = {
+  presupuestos:'Presupuestos <em>Inteligentes</em>',
+  crm:'CRM <em>de Clientes</em>',
+  maquinaria:'Maquinaria <em>y Flota</em>',
+  rutas:'Rutas <em>y Cuadrillas</em>',
+  admin:'Administración <em>de Usuarios</em>'
+};
+
+document.getElementById('dateChip').textContent = new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+document.getElementById('ruta-hoy-fecha').textContent = new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+function mostrarCapa(id){
+  document.querySelectorAll('.layer').forEach(l=>{l.style.display='none';l.classList.remove('visible')});
+  const el=document.getElementById(id);
+  el.style.display='flex';
+  if(id==='layer-app') el.style.display='block';
+}
+
+const cfgUrl=localStorage.getItem('sb_url');
+const cfgKey=localStorage.getItem('sb_key');
+
+if(!cfgUrl||!cfgKey){
+  mostrarCapa('layer-setup');
+} else {
+  initSupabase(cfgUrl,cfgKey);
+}
+
+function guardarConfig(){
+  const url=document.getElementById('cfg-url').value.trim();
+  const key=document.getElementById('cfg-key').value.trim();
+  if(!url||!key){mostrarToast('Completa los dos campos');return;}
+  localStorage.setItem('sb_url',url);
+  localStorage.setItem('sb_key',key);
+  initSupabase(url,key);
+}
+
+function initSupabase(url,key){
+  try{
+    sb=supabase.createClient(url,key);
+    sb.auth.getSession().then(({data:{session}})=>{
+      if(session){ sesionUser=session.user; cargarPerfil(); }
+      else { mostrarCapa('layer-auth'); }
+    });
+    sb.auth.onAuthStateChange((_,session)=>{
+      if(session){ sesionUser=session.user; cargarPerfil(); }
+      else { sesionUser=null; perfilUser=null; mostrarCapa('layer-auth'); }
+    });
+  }catch(e){ mostrarToast('Error de conexión'); }
+}
+
+async function cargarPerfil(){
+  const{data,error}=await sb.from('perfiles').select('*').eq('id',sesionUser.id).single();
+  if(error||!data){ mostrarCapa('layer-auth'); return; }
+  perfilUser=data;
+  if(data.rol==='pendiente'){
+    document.getElementById('pending-email-txt').textContent=sesionUser.email;
+    mostrarCapa('layer-pending');
+    return;
+  }
+  configurarApp();
+  mostrarCapa('layer-app');
+  cargarTodo();
+}
+
+// ══════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════
+function cambiarTab(tab){
+  document.getElementById('tab-login').classList.toggle('active',tab==='login');
+  document.getElementById('tab-register').classList.toggle('active',tab==='register');
+  document.getElementById('form-login').classList.toggle('visible',tab==='login');
+  document.getElementById('form-register').classList.toggle('visible',tab==='register');
+}
+
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const errEl=document.getElementById('login-error');
+  errEl.classList.remove('visible');
+  if(!email||!pass){errEl.textContent='Completa todos los campos';errEl.classList.add('visible');return;}
+  const{error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){errEl.textContent=error.message==='Invalid login credentials'?'Email o contraseña incorrectos':error.message;errEl.classList.add('visible');}
+}
+
+async function doRegister(){
+  const nombre=document.getElementById('reg-nombre').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-pass').value;
+  const errEl=document.getElementById('reg-error');
+  errEl.classList.remove('visible');
+  if(!nombre||!email||!pass){errEl.textContent='Completa todos los campos';errEl.classList.add('visible');return;}
+  if(pass.length<6){errEl.textContent='La contraseña debe tener al menos 6 caracteres';errEl.classList.add('visible');return;}
+  const{error}=await sb.auth.signUp({email,password:pass,options:{data:{nombre}}});
+  if(error){errEl.textContent=error.message;errEl.classList.add('visible');return;}
+  mostrarToast('✓ Cuenta creada. Espera aprobación del administrador.');
+  cambiarTab('login');
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  sesionUser=null; perfilUser=null;
+  mostrarCapa('layer-auth');
+}
+
+// ══════════════════════════════════════════════════════
+// CONFIGURAR APP SEGÚN ROL
+// ══════════════════════════════════════════════════════
+function esAdmin(){ return perfilUser?.rol==='admin'; }
+function tienePerm(mod){ return esAdmin()||perfilUser?.permisos?.[mod]===true; }
+
+function configurarApp(){
+  const nombre=perfilUser.nombre||sesionUser.email.split('@')[0];
+  const ini=nombre.charAt(0).toUpperCase();
+  const rolLabel=esAdmin()?'Administrador':'Empleado';
+
+  document.getElementById('sb-nombre').textContent=nombre;
+  document.getElementById('sb-rol').textContent=rolLabel;
+  document.getElementById('sb-avatar').textContent=ini;
+  document.getElementById('mob-avatar').textContent=ini;
+
+  // Mostrar/ocultar nav items según permisos
+  const navItems=[
+    {id:'nav-presupuestos',mod:'presupuestos'},
+    {id:'nav-crm',mod:'crm'},
+    {id:'nav-maquinaria',mod:'maquinaria'},
+    {id:'nav-rutas',mod:'rutas'},
+    {id:'nav-admin',mod:'admin'},
+  ];
+  navItems.forEach(n=>{
+    const el=document.getElementById(n.id);
+    if(n.mod==='admin'){el.style.display=esAdmin()?'flex':'none';}
+    else{el.style.display=tienePerm(n.mod)?'flex':'none';}
+  });
+
+  // Primera pestaña visible
+  const primero = esAdmin()?'presupuestos':
+    tienePerm('presupuestos')?'presupuestos':
+    tienePerm('crm')?'crm':
+    tienePerm('maquinaria')?'maquinaria':
+    tienePerm('rutas')?'rutas':'maquinaria';
+
+  // Bottom nav móvil
+  const bnavItems=[];
+  if(tienePerm('presupuestos')) bnavItems.push({mod:'presupuestos',icon:'🌿',label:'Presupuestos'});
+  if(tienePerm('crm')) bnavItems.push({mod:'crm',icon:'🤝',label:'Clientes'});
+  if(tienePerm('maquinaria')) bnavItems.push({mod:'maquinaria',icon:'⚙️',label:'Maquinaria'});
+  if(tienePerm('rutas')) bnavItems.push({mod:'rutas',icon:'🗺️',label:'Rutas'});
+  if(esAdmin()) bnavItems.push({mod:'admin',icon:'👑',label:'Admin'});
+  const cols=bnavItems.length||1;
+  const bnav=document.getElementById('bnav-inner');
+  bnav.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  bnav.innerHTML=bnavItems.map(b=>`
+    <div class="bnav-item" id="bnav-${b.mod}" onclick="goTo('${b.mod}',null,this)">
+      <div class="bnav-icon">${b.icon}</div>
+      <div class="bnav-label">${b.label}</div>
+    </div>`).join('');
+
+  // Módulo rutas: mostrar vista según rol
+  document.getElementById('rutas-admin').style.display=esAdmin()?'block':'none';
+  document.getElementById('rutas-empleado').style.display=esAdmin()?'none':'block';
+
+  // Botón añadir maquinaria: solo admin
+  document.getElementById('maq-add-btn').style.display=esAdmin()?'block':'none';
+
+  goTo(primero, document.getElementById('nav-'+primero));
+  if(typeof mostrarTerra==='function') mostrarTerra();
+}
+
+// ══════════════════════════════════════════════════════
+// NAVEGACIÓN
+// ══════════════════════════════════════════════════════
+function goTo(mod,sidebarEl,bnavEl){
+  document.querySelectorAll('.module').forEach(m=>m.classList.remove('visible'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.bnav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('mod-'+mod)?.classList.add('visible');
+  if(sidebarEl)sidebarEl.classList.add('active');
+  if(bnavEl)bnavEl.classList.add('active');
+  document.getElementById('bnav-'+mod)?.classList.add('active');
+  document.getElementById('nav-'+mod)?.classList.add('active');
+  const pt=document.getElementById('pageTitle');
+  if(pt)pt.innerHTML=TITULOS[mod]||mod;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ══════════════════════════════════════════════════════
+// CARGAR TODO
+// ══════════════════════════════════════════════════════
+async function cargarTodo(){
+  const proms=[];
+  if(tienePerm('presupuestos')) proms.push(cargarPresupuestos());
+  if(tienePerm('crm')) proms.push(cargarClientes());
+  if(tienePerm('maquinaria')) proms.push(cargarMaquinaria());
+  if(tienePerm('rutas')) proms.push(cargarRutas());
+  if(esAdmin()) proms.push(cargarUsuariosAdmin());
+  await Promise.all(proms);
+}
+
+// ══════════════════════════════════════════════════════
+// PRESUPUESTOS
+// ══════════════════════════════════════════════════════
+function selTipo(t){
+  tipoActual=t;
+  document.getElementById('tipo-nuevo').classList.toggle('selected',t==='nuevo');
+  document.getElementById('tipo-mant').classList.toggle('selected',t==='mant');
+  document.getElementById('campos-nuevo').style.display=t==='nuevo'?'':'none';
+  document.getElementById('campos-mant').style.display=t==='mant'?'':'none';
+}
+
+async function cargarPresupuestos(){
+  if(!sb)return;
+  const{data}=await sb.from('presupuestos').select('*').order('created_at',{ascending:false});
+  if(!data)return;
+  document.getElementById('kpi-p-total').textContent=data.length;
+  document.getElementById('kpi-p-acep').textContent=data.filter(p=>p.status==='aceptado').length;
+  document.getElementById('kpi-p-pend').textContent=data.filter(p=>p.status==='pendiente').length;
+  const lista=document.getElementById('pres-lista');
+  if(!data.length){lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:12px 0">No hay presupuestos guardados aún.</p>';return;}
+  lista.innerHTML=data.map(p=>`
+    <div class="presup-row">
+      <div class="presup-head">
+        <div class="presup-cliente">${p.cliente_nombre}</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span class="pb-${p.tipo}">${p.tipo==='nuevo'?'Jardín nuevo':'Mantenimiento'}</span>
+          <select style="background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:3px 8px;color:var(--cr);font-size:11px;cursor:pointer;" onchange="cambiarStatusPres('${p.id}',this.value)">
+            <option value="pendiente" ${p.status==='pendiente'?'selected':''}>⏳ Pendiente</option>
+            <option value="aceptado" ${p.status==='aceptado'?'selected':''}>✓ Aceptado</option>
+            <option value="rechazado" ${p.status==='rechazado'?'selected':''}>✗ Rechazado</option>
+          </select>
+        </div>
+      </div>
+      <div class="presup-meta">${p.cliente_localidad||''} ${p.metros?'· '+p.metros+' m²':''}</div>
+      <div class="presup-fecha">${new Date(p.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'})}</div>
+    </div>`).join('');
+}
+
+async function generarPresupuesto(){
+  const cliente=document.getElementById('p-cliente').value||'Cliente';
+  const localidad=document.getElementById('p-localidad').value||'no especificada';
+  const metros=document.getElementById('p-metros').value||'no indicados';
+  const terreno=document.getElementById('p-terreno').value||'no especificado';
+  const desc=document.getElementById('p-desc').value||'';
+  let prompt;
+  if(tipoActual==='nuevo'){
+    prompt=`Genera un presupuesto profesional de jardín nuevo para Mediterraneum.\nCliente: ${cliente} | Localidad: ${localidad} | Superficie: ${metros} m² | Terreno: ${terreno}\nEstilo: ${document.getElementById('p-estilo').value} | Riego: ${document.getElementById('p-riego').value} | Urgencia: ${document.getElementById('p-urgencia').value}\nNotas: ${desc}\n\nIncluye: resumen del proyecto, partidas detalladas con precios orientativos, total estimado y condiciones de pago.`;
+  }else{
+    prompt=`Genera un presupuesto de contrato de mantenimiento para Mediterraneum.\nCliente: ${cliente} | Localidad: ${localidad} | Superficie: ${metros} m² | Estado: ${document.getElementById('p-estado').value}\nFrecuencia: ${document.getElementById('p-freq').value} | Riego: ${document.getElementById('p-riego-m').value}\nNotas: ${desc}\n\nIncluye: trabajos incluidos en cada visita, precio por visita/mes/año, condiciones y permanencia mínima.`;
+  }
+  mostrarCarga('pres-output','pres-texto');
+  try{const r=await callAI(prompt);presupuestoActual=r;mostrarResultado('pres-output','pres-texto',r);}
+  catch(e){mostrarResultado('pres-output','pres-texto','Error de conexión con la IA.');}
+}
+
+async function guardarPresupuesto(){
+  if(!sb||!presupuestoActual){mostrarToast('Genera primero un presupuesto');return;}
+  const{error}=await sb.from('presupuestos').insert({
+    cliente_nombre:document.getElementById('p-cliente').value||'Sin nombre',
+    cliente_localidad:document.getElementById('p-localidad').value||'',
+    tipo:tipoActual, metros:parseFloat(document.getElementById('p-metros').value)||null,
+    descripcion:document.getElementById('p-desc').value||'',
+    contenido_ia:presupuestoActual, status:'pendiente',
+    created_by:sesionUser.id
+  });
+  if(error){mostrarToast('Error: '+error.message);return;}
+  mostrarToast('✓ Presupuesto guardado');cargarPresupuestos();
+}
+
+async function cambiarStatusPres(id,status){
+  await sb.from('presupuestos').update({status}).eq('id',id);
+  mostrarToast('✓ Estado actualizado');cargarPresupuestos();
+}
+
+// ══════════════════════════════════════════════════════
+// CRM CLIENTES
+// ══════════════════════════════════════════════════════
+async function cargarClientes(){
+  if(!sb)return;
+  const{data}=await sb.from('clientes').select('*').order('created_at',{ascending:false});
+  if(!data)return;
+  todosClientes=data;
+  document.getElementById('kpi-c-total').textContent=data.length;
+  document.getElementById('kpi-c-act').textContent=data.filter(c=>c.status==='activo').length;
+  document.getElementById('kpi-c-rev').textContent=data.filter(c=>c.status==='revisar').length;
+  const sel=document.getElementById('crm-sel');
+  sel.innerHTML='<option value="">— Elige un cliente —</option>'+data.map(c=>`<option value="${c.id}">${c.nombre}${c.localidad?' · '+c.localidad:''}</option>`).join('');
+  renderCli('todos');
+}
+
+function renderCli(filtro){
+  const list=document.getElementById('cli-list');
+  const datos=filtro==='todos'?todosClientes:todosClientes.filter(c=>c.status===filtro);
+  if(!datos.length){list.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:12px 0">Sin clientes en esta categoría.</p>';return;}
+  list.innerHTML=datos.map(c=>`
+    <div class="row-item">
+      <div class="row-avatar">${c.nombre.charAt(0).toUpperCase()}</div>
+      <div class="row-info"><div class="row-name">${c.nombre}</div><div class="row-meta">${[c.localidad,c.meta||c.tipo_servicio].filter(Boolean).join(' · ')}</div></div>
+      <div class="row-actions">
+        <select class="status-badge s-${c.status}" onchange="cambiarStatusCli('${c.id}',this.value)" style="padding:3px 6px;font-size:10px;width:auto;border-radius:20px;cursor:pointer;">
+          <option value="activo" ${c.status==='activo'?'selected':''}>Activo</option>
+          <option value="pendiente" ${c.status==='pendiente'?'selected':''}>Pendiente</option>
+          <option value="revisar" ${c.status==='revisar'?'selected':''}>Revisar</option>
+        </select>
+        <button onclick="eliminarCli('${c.id}')" style="background:none;border:none;color:rgba(245,240,232,.25);cursor:pointer;font-size:16px;padding:2px 4px;">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function filtrarCli(filtro,el){
+  document.querySelectorAll('.chips-row .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');renderCli(filtro);
+}
+
+async function cambiarStatusCli(id,status){
+  await sb.from('clientes').update({status,updated_at:new Date().toISOString()}).eq('id',id);
+  mostrarToast('✓ Estado actualizado');cargarClientes();
+}
+
+async function eliminarCli(id){
+  if(!confirm('¿Eliminar este cliente? No se puede deshacer.'))return;
+  await sb.from('clientes').delete().eq('id',id);
+  mostrarToast('✓ Cliente eliminado');cargarClientes();
+}
+
+async function guardarCliente(){
+  const nombre=document.getElementById('mc-nombre').value.trim();
+  if(!nombre){mostrarToast('El nombre es obligatorio');return;}
+  const{error}=await sb.from('clientes').insert({
+    nombre, localidad:document.getElementById('mc-localidad').value,
+    telefono:document.getElementById('mc-tel').value,
+    tipo_servicio:document.getElementById('mc-tipo').value,
+    meta:document.getElementById('mc-meta').value, status:'activo'
+  });
+  if(error){mostrarToast('Error: '+error.message);return;}
+  cerrarModal('modal-cliente');mostrarToast('✓ Cliente guardado');cargarClientes();
+  ['mc-nombre','mc-localidad','mc-tel','mc-meta'].forEach(id=>document.getElementById(id).value='');
+}
+
+async function analizarCliente(){
+  const id=document.getElementById('crm-sel').value;
+  if(!id){mostrarToast('Selecciona un cliente');return;}
+  const c=todosClientes.find(x=>x.id===id);
+  const accion=document.getElementById('crm-accion').value;
+  mostrarCarga('crm-output','crm-texto');
+  try{const r=await callAI(`Actúa como gestor comercial de Mediterraneum (jardines mediterráneos, zona Alicante/Valencia/Murcia).\nCliente: ${c.nombre} | Localidad: ${c.localidad||''} | Servicio: ${c.tipo_servicio||''} | Estado: ${c.status} | Notas: ${c.meta||''}\nTarea: ${accion}\n\nSé concreto y accionable.`);mostrarResultado('crm-output','crm-texto',r);}
+  catch(e){mostrarResultado('crm-output','crm-texto','Error de conexión.');}
+}
+
+// ══════════════════════════════════════════════════════
+// MAQUINARIA
+// ══════════════════════════════════════════════════════
+async function cargarMaquinaria(){
+  if(!sb)return;
+  const{data}=await sb.from('maquinaria').select('*').eq('activo',true).order('nombre');
+  if(!data)return;
+  document.getElementById('kpi-m-total').textContent=data.length;
+  document.getElementById('kpi-m-urg').textContent=data.filter(m=>m.alerta==='urgente').length;
+  document.getElementById('kpi-m-ok').textContent=data.filter(m=>m.alerta==='ok').length;
+  const sel=document.getElementById('maq-sel');
+  sel.innerHTML=data.map(m=>`<option value="${m.id}">${m.nombre}${m.matricula?' ('+m.matricula+')':''}</option>`).join('');
+  const iconMap={vehiculo:'🚐',maquina:'🌿'};
+  const aLabel={ok:'OK',pronto:'Pronto',urgente:'Urgente'};
+  const pct={ok:25,pronto:65,urgente:88};
+  const fill={ok:'f-ok',pronto:'f-pronto',urgente:'f-urgente'};
+  document.getElementById('maq-grid').innerHTML=data.map(m=>`
+    <div class="maq-card">
+      <div class="maq-header"><div class="maq-icon">${iconMap[m.tipo]||'🔧'}</div><div class="maq-alerta a-${m.alerta}">${aLabel[m.alerta]}</div></div>
+      <div class="maq-name">${m.nombre}</div>
+      <div class="maq-meta">${[m.matricula,m.horas_uso?m.horas_uso+' h':null,m.km_uso&&m.km_uso>0?m.km_uso+' km':null].filter(Boolean).join(' · ')}</div>
+      <div class="prog-bar"><div class="prog-fill ${fill[m.alerta]}" style="width:${pct[m.alerta]}%"></div></div>
+    </div>`).join('');
+}
+
+async function guardarMaquina(){
+  const nombre=document.getElementById('mm-nombre').value.trim();
+  if(!nombre){mostrarToast('El nombre es obligatorio');return;}
+  const{error}=await sb.from('maquinaria').insert({
+    nombre, tipo:document.getElementById('mm-tipo').value,
+    matricula:document.getElementById('mm-mat').value||null,
+    horas_uso:parseFloat(document.getElementById('mm-horas').value)||0,
+    alerta:document.getElementById('mm-alerta').value,
+    notas:document.getElementById('mm-notas').value||null, activo:true
+  });
+  if(error){mostrarToast('Error: '+error.message);return;}
+  cerrarModal('modal-maquina');mostrarToast('✓ Activo guardado');cargarMaquinaria();
+}
+
+async function consultarMaq(){
+  const sel=document.getElementById('maq-sel');
+  const nombre=sel.options[sel.selectedIndex]?.text||'Activo';
+  const horas=document.getElementById('maq-horas').value||'no indicadas';
+  const fecha=document.getElementById('maq-fecha').value||'no indicada';
+  const sintoma=document.getElementById('maq-sintoma').value||'ninguno';
+  mostrarCarga('maq-output','maq-texto');
+  try{const r=await callAI(`Eres técnico de maquinaria de jardín.\nActivo: ${nombre} | Horas/km: ${horas} | Último mantenimiento: ${fecha} | Síntoma: ${sintoma}\n\nIndica: estado estimado, qué revisar ahora, qué planificar próximamente, coste estimado y riesgo de avería (bajo/medio/alto).`);mostrarResultado('maq-output','maq-texto',r);}
+  catch(e){mostrarResultado('maq-output','maq-texto','Error de conexión.');}
+}
+
+// ══════════════════════════════════════════════════════
+// RUTAS
+// ══════════════════════════════════════════════════════
+async function cargarRutas(){
+  if(!sb)return;
+  if(!esAdmin()){
+    // Empleado: solo carga la ruta de hoy
+    const hoy=new Date().toISOString().split('T')[0];
+    const{data}=await sb.from('rutas').select('*').eq('fecha',hoy).order('created_at',{ascending:false}).limit(1);
+    const content=document.getElementById('ruta-hoy-content');
+    if(!data||!data.length){
+      content.innerHTML='<div class="ruta-hoy-empty"><div class="icon">🗺️</div><p>No hay ruta planificada para hoy.<br>Consulta con tu responsable.</p></div>';
+    }else{
+      content.innerHTML=`<div class="ruta-hoy-content">${data[0].plan_ia||data[0].trabajos||'Sin detalles'}</div>`;
+    }
+    return;
+  }
+  // Admin: carga historial completo
+  const{data}=await sb.from('rutas').select('*').order('created_at',{ascending:false}).limit(15);
+  const{data:emps}=await sb.from('empleados').select('*').eq('activo',true);
+  const hoy=new Date().toISOString().split('T')[0];
+  document.getElementById('kpi-r-total').textContent=data?.length||0;
+  document.getElementById('kpi-r-emp').textContent=emps?.length||0;
+  document.getElementById('kpi-r-hoy').textContent=data?.filter(r=>r.fecha===hoy).length||0;
+  const lista=document.getElementById('rutas-lista');
+  if(!data?.length){lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:12px 0">No hay rutas guardadas aún.</p>';return;}
+  const colors=['#4a7c59','#c9a84c','#7ec8a0','#e2c47a'];
+  lista.innerHTML=data.map((r,i)=>`
+    <div class="ruta-card">
+      <div class="ruta-color" style="background:${colors[i%4]}"></div>
+      <div class="ruta-info">
+        <div class="ruta-name">Jornada · ${new Date(r.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}</div>
+        <div class="ruta-sub">${r.base_salida||''} · ${(r.trabajos||'').substring(0,60)}${(r.trabajos||'').length>60?'...':''}</div>
+      </div>
+      <div class="ruta-stats">
+        <div><div class="stat-val">${r.km_estimados||'—'}</div><div class="stat-lbl">km</div></div>
+        <div><div class="stat-val">${(r.hora_inicio||'—').substring(0,5)}</div><div class="stat-lbl">inicio</div></div>
+      </div>
+    </div>`).join('');
+}
+
+async function planificarRuta(){
+  const emp=document.getElementById('r-emp').value||'4';
+  const veh=document.getElementById('r-veh').value||'2';
+  const trab=document.getElementById('r-trabajos').value||'varios trabajos';
+  const base=document.getElementById('r-base').value||'Elche';
+  const hora=document.getElementById('r-hora').value||'07:30';
+  mostrarCarga('ruta-output','ruta-texto');
+  try{const r=await callAI(`Planificador de rutas para Mediterraneum (zona Alicante/Valencia/Murcia).\nEmpleados: ${emp} | Vehículos: ${veh} | Base: ${base} | Inicio: ${hora}\nTrabajos del día:\n${trab}\n\nOrganiza cuadrillas de forma óptima: asigna empleados a vehículos, orden de visitas minimizando km, horarios estimados para cada trabajo y km totales por cuadrilla. Formato estructurado y claro.`);rutaActual=r;mostrarResultado('ruta-output','ruta-texto',r);}
+  catch(e){mostrarResultado('ruta-output','ruta-texto','Error de conexión.');}
+}
+
+async function guardarRuta(){
+  if(!sb||!rutaActual){mostrarToast('Genera primero una ruta');return;}
+  const{error}=await sb.from('rutas').insert({
+    fecha:new Date().toISOString().split('T')[0],
+    cuadrilla:'Jornada del día',
+    trabajos:document.getElementById('r-trabajos').value,
+    base_salida:document.getElementById('r-base').value,
+    hora_inicio:document.getElementById('r-hora').value,
+    plan_ia:rutaActual, created_by:sesionUser.id
+  });
+  if(error){mostrarToast('Error: '+error.message);return;}
+  mostrarToast('✓ Ruta guardada — Los empleados ya pueden verla');cargarRutas();
+}
+
+// ══════════════════════════════════════════════════════
+// ADMIN: USUARIOS Y PERMISOS
+// ══════════════════════════════════════════════════════
+async function cargarUsuariosAdmin(){
+  if(!sb||!esAdmin())return;
+  const{data}=await sb.from('perfiles').select('*').order('created_at');
+  if(!data)return;
+  document.getElementById('kpi-a-total').textContent=data.length;
+  document.getElementById('kpi-a-act').textContent=data.filter(u=>u.rol!=='pendiente'&&u.activo).length;
+  document.getElementById('kpi-a-pend').textContent=data.filter(u=>u.rol==='pendiente').length;
+  const lista=document.getElementById('admin-users-list');
+  if(!data.length){lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px">No hay usuarios.</p>';return;}
+  lista.innerHTML=data.map(u=>{
+    const rolBadge=u.rol==='admin'?'s-admin':u.rol==='empleado'?'s-empleado':'s-espera';
+    const rolLabel=u.rol==='admin'?'Admin':u.rol==='empleado'?'Empleado':'Pendiente';
+    const perms=u.permisos||{};
+    const isSelf=u.id===sesionUser.id;
+    return `
+    <div class="admin-user-card" id="ucard-${u.id}">
+      <div class="admin-user-header">
+        <div class="row-avatar">${(u.nombre||u.email||'?').charAt(0).toUpperCase()}</div>
+        <div class="admin-user-info">
+          <div class="admin-user-name">${u.nombre||'Sin nombre'} ${isSelf?'<span style="font-size:11px;color:var(--do)">(tú)</span>':''}</div>
+          <div class="admin-user-email">${u.email}</div>
+        </div>
+        <span class="status-badge ${rolBadge}">${rolLabel}</span>
+      </div>
+      ${!isSelf?`
+      <div style="margin-bottom:14px">
+        <label style="font-size:11px;letter-spacing:.12em;color:rgba(201,168,76,.7);text-transform:uppercase;display:block;margin-bottom:8px">Rol</label>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm ${u.rol==='admin'?'btn-success':'btn-secondary'}" onclick="cambiarRol('${u.id}','admin')">👑 Admin</button>
+          <button class="btn btn-sm ${u.rol==='empleado'?'btn-success':'btn-secondary'}" onclick="cambiarRol('${u.id}','empleado')">👷 Empleado</button>
+          <button class="btn btn-sm ${u.rol==='pendiente'?'btn-danger':'btn-secondary'}" onclick="cambiarRol('${u.id}','pendiente')">⏳ Suspender</button>
+        </div>
+      </div>
+      ${u.rol==='empleado'?`
+      <div>
+        <label style="font-size:11px;letter-spacing:.12em;color:rgba(201,168,76,.7);text-transform:uppercase;display:block;margin-bottom:8px">Permisos de módulos</label>
+        <div class="permisos-grid">
+          ${['presupuestos','crm','maquinaria','rutas'].map(mod=>{
+            const on=perms[mod]===true;
+            const labels={presupuestos:'🌿 Presupuestos',crm:'🤝 Clientes',maquinaria:'⚙️ Maquinaria',rutas:'🗺️ Rutas'};
+            return `<div class="permiso-toggle ${on?'on':''}" id="pt-${u.id}-${mod}" onclick="togglePermiso('${u.id}','${mod}')">
+              <span class="permiso-label">${labels[mod]}</span>
+              <div class="toggle-switch"></div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`:``}
+      `:'<p style="font-size:12px;color:rgba(245,240,232,.35)">No puedes modificar tu propio perfil desde aquí.</p>'}
+    </div>`;
+  }).join('');
+}
+
+async function cambiarRol(userId,rol){
+  const{error}=await sb.from('perfiles').update({rol,updated_at:new Date().toISOString()}).eq('id',userId);
+  if(error){mostrarToast('Error: '+error.message);return;}
+  mostrarToast(`✓ Rol actualizado a ${rol}`);cargarUsuariosAdmin();
+}
+
+async function togglePermiso(userId,mod){
+  const el=document.getElementById(`pt-${userId}-${mod}`);
+  const{data}=await sb.from('perfiles').select('permisos').eq('id',userId).single();
+  const perms=data?.permisos||{};
+  perms[mod]=!perms[mod];
+  const{error}=await sb.from('perfiles').update({permisos:perms,updated_at:new Date().toISOString()}).eq('id',userId);
+  if(error){mostrarToast('Error: '+error.message);return;}
+  el.classList.toggle('on',perms[mod]);
+  mostrarToast(`✓ Permiso ${mod} ${perms[mod]?'activado':'desactivado'}`);
+}
+
+// ══════════════════════════════════════════════════════
+// API IA
+// ══════════════════════════════════════════════════════
+async function callAI(prompt){
+  let apiKey=localStorage.getItem('anthropic_key');
+  if(!apiKey){
+    abrirModal('modal-apikey');
+    throw new Error('Introduce tu API Key en el formulario que acaba de abrirse');
+  }
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',max_tokens:1000,
+      system:'Eres el asistente de IA de Mediterraneum, empresa de jardines en Andalucía. Respondes siempre en español, de forma profesional y concisa. Tus respuestas son concretas y listas para usar en el negocio.',
+      messages:[{role:'user',content:prompt}]
+    })
+  });
+  const d=await res.json();
+  if(d.error){
+    if(d.error.type==='authentication_error'){localStorage.removeItem('anthropic_key');}
+    throw new Error(d.error.message||d.error);
+  }
+  return d.content?.[0]?.text||'Sin respuesta.';
+}
+
+// ══════════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════════
+function mostrarCarga(oid,tid){
+  const o=document.getElementById(oid),t=document.getElementById(tid);
+  o.classList.add('visible');
+  t.innerHTML=`<div class="ai-loading">Generando respuesta <div class="dots"><span></span><span></span><span></span></div></div>`;
+  setTimeout(()=>o.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+}
+function mostrarResultado(oid,tid,texto){document.getElementById(tid).textContent=texto;}
+function mostrarToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3200);
+}
+function abrirModal(id){document.getElementById(id).classList.add('open');}
+function cerrarModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
+});
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+// ══ API KEY CONFIG ══
+function configurarAPIKey(){
+  const actual=localStorage.getItem('anthropic_key');
+  if(actual) document.getElementById('apikey-input').value=actual;
+  abrirModal('modal-apikey');
+}
+function guardarAPIKey(){
+  const key=document.getElementById('apikey-input').value.trim();
+  if(!key){mostrarToast('Introduce una API key');return;}
+  localStorage.setItem('anthropic_key',key);
+  cerrarModal('modal-apikey');
+  mostrarToast('✓ API Key guardada correctamente');
+}
+</script>
+
+<!-- ══ TERRA WIDGET ══ -->
+<style>
+.terra-btn{position:fixed;bottom:28px;right:28px;width:58px;height:58px;border-radius:50%;background:linear-gradient(145deg,#d4b055,#a8872e);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:5px 5px 16px rgba(0,0,0,.5),-2px -2px 8px rgba(255,255,255,.07);transition:all .3s;z-index:9998;animation:terra-breathe 3s infinite}
+@keyframes terra-breathe{0%,100%{box-shadow:5px 5px 16px rgba(0,0,0,.5),-2px -2px 8px rgba(255,255,255,.07),0 0 0 0 rgba(201,168,76,.4)}50%{box-shadow:5px 5px 16px rgba(0,0,0,.5),-2px -2px 8px rgba(255,255,255,.07),0 0 0 10px rgba(201,168,76,0)}}
+.terra-btn:hover{transform:scale(1.08) translateY(-2px);animation:none}
+.terra-btn:active{box-shadow:inset 3px 3px 8px rgba(0,0,0,.4);transform:scale(.96)}
+.terra-btn svg{width:24px;height:24px}
+.terra-btn.open .t-icon-chat{display:none}.terra-btn.open .t-icon-close{display:block!important}.t-icon-close{display:none}
+.terra-badge{position:fixed;bottom:98px;right:28px;background:linear-gradient(135deg,#1e361e,#162816);border:1px solid rgba(201,168,76,.35);border-radius:14px 14px 4px 14px;padding:10px 16px;font-size:13px;color:#f5f0e8;font-family:"DM Sans",sans-serif;box-shadow:4px 4px 12px rgba(0,0,0,.4);z-index:9997;max-width:200px;cursor:pointer;display:none;animation:badge-in .4s ease both}
+@keyframes badge-in{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.terra-badge strong{color:#e2c47a;display:block;margin-bottom:2px;font-size:11px;letter-spacing:.05em}
+.terra-window{position:fixed;bottom:98px;right:28px;width:340px;height:520px;background:linear-gradient(180deg,#1a2e1a,#162616);border:1px solid rgba(201,168,76,.25);border-radius:20px;display:flex;flex-direction:column;overflow:hidden;z-index:9999;box-shadow:8px 8px 32px rgba(0,0,0,.6),-3px -3px 12px rgba(255,255,255,.04);transform:scale(.9) translateY(20px);opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.34,1.56,.64,1)}
+.terra-window.open{transform:scale(1) translateY(0);opacity:1;pointer-events:all}
+.t-header{padding:16px 18px 12px;background:linear-gradient(135deg,rgba(45,74,45,.8),rgba(26,46,26,.9));border-bottom:1px solid rgba(201,168,76,.15);display:flex;align-items:center;gap:12px;position:relative}
+.t-header::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#c9a84c,transparent)}
+.t-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(145deg,#d4b055,#4a7c59);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:3px 3px 8px rgba(0,0,0,.4);position:relative;flex-shrink:0}
+.t-avatar::after{content:"";position:absolute;bottom:1px;right:1px;width:9px;height:9px;background:#4CAF50;border-radius:50%;border:2px solid #1a2e1a}
+.t-name{font-family:"Cormorant Garamond",serif;font-size:17px;font-weight:400;color:#f5f0e8}
+.t-status{font-size:10px;color:rgba(201,168,76,.7);letter-spacing:.1em;text-transform:uppercase}
+.t-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
+.t-msgs::-webkit-scrollbar{width:3px}.t-msgs::-webkit-scrollbar-thumb{background:rgba(201,168,76,.3);border-radius:2px}
+.t-msg{max-width:85%;animation:msg-in .3s ease both}
+@keyframes msg-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.t-msg-terra{align-self:flex-start}.t-msg-user{align-self:flex-end}
+.t-bubble{padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.6;font-family:"DM Sans",sans-serif}
+.t-msg-terra .t-bubble{background:rgba(45,74,45,.6);border:1px solid rgba(201,168,76,.12);color:#ede5d0;border-radius:4px 14px 14px 14px;box-shadow:3px 3px 8px rgba(0,0,0,.3)}
+.t-msg-user .t-bubble{background:linear-gradient(135deg,rgba(201,168,76,.2),rgba(74,124,89,.15));border:1px solid rgba(201,168,76,.25);color:#f5f0e8;border-radius:14px 4px 14px 14px;box-shadow:3px 3px 8px rgba(0,0,0,.3)}
+.t-time{font-size:10px;color:rgba(245,240,232,.3);margin-top:3px;padding:0 4px}
+.t-msg-terra .t-time{text-align:left}.t-msg-user .t-time{text-align:right}
+.t-typing{align-self:flex-start;background:rgba(45,74,45,.6);border:1px solid rgba(201,168,76,.12);border-radius:4px 14px 14px 14px;padding:10px 14px;display:none;gap:4px;align-items:center}
+.t-typing.visible{display:flex}
+.t-dot{width:5px;height:5px;background:#c9a84c;border-radius:50%;animation:tdot 1.2s infinite}
+.t-dot:nth-child(2){animation-delay:.2s}.t-dot:nth-child(3){animation-delay:.4s}
+@keyframes tdot{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1);opacity:1}}
+.t-lead-saved{background:linear-gradient(135deg,rgba(74,124,89,.2),rgba(201,168,76,.1));border:1px solid rgba(74,124,89,.4);border-radius:10px;padding:10px 12px;font-size:11px;color:#7ec8a0;display:flex;align-items:center;gap:8px;font-family:"DM Sans",sans-serif}
+.t-input-area{padding:10px 14px;border-top:1px solid rgba(201,168,76,.1);display:flex;gap:8px;align-items:flex-end;background:rgba(26,46,26,.8)}
+.t-input{flex:1;background:#1c321c;border:none;border-radius:10px;padding:9px 12px;color:#f5f0e8;font-family:"DM Sans",sans-serif;font-size:13px;outline:none;resize:none;max-height:70px;min-height:36px;box-shadow:inset 3px 3px 7px rgba(0,0,0,.4),inset -1px -1px 4px rgba(255,255,255,.05)}
+.t-input:focus{box-shadow:inset 3px 3px 7px rgba(0,0,0,.4),inset -1px -1px 4px rgba(255,255,255,.05),0 0 0 1px rgba(201,168,76,.4)}
+.t-input::placeholder{color:rgba(245,240,232,.3)}
+.t-send{width:36px;height:36px;border-radius:50%;background:linear-gradient(145deg,#d4b055,#a8872e);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:3px 3px 8px rgba(0,0,0,.4),-1px -1px 4px rgba(255,255,255,.06);transition:all .2s}
+.t-send:hover{transform:scale(1.08)}.t-send:active{box-shadow:inset 2px 2px 5px rgba(0,0,0,.4);transform:scale(.96)}
+.t-powered{text-align:center;padding:5px;font-size:10px;color:rgba(245,240,232,.2);font-family:"DM Sans",sans-serif;letter-spacing:.1em}
+@media(max-width:768px){.terra-window{width:calc(100vw - 32px);right:16px;bottom:calc(var(--nav-h) + var(--safe) + 8px);height:60vh}.terra-btn{bottom:calc(var(--nav-h) + var(--safe) + 12px);right:16px}.terra-badge{right:16px;bottom:calc(var(--nav-h) + var(--safe) + 76px)}}
+</style>
+
+<div class="terra-badge" id="t-badge" onclick="tToggle()">
+  <strong>🌿 Terra</strong>¿En qué puedo ayudarte?
+</div>
+<button class="terra-btn" id="t-btn" onclick="tToggle()">
+  <svg class="t-icon-chat" viewBox="0 0 24 24" fill="none" stroke="#1a2e1a" stroke-width="2.5" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <svg class="t-icon-close" viewBox="0 0 24 24" fill="none" stroke="#1a2e1a" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+</button>
+<div class="terra-window" id="t-window">
+  <div class="t-header">
+    <div class="t-avatar">🌿</div>
+    <div><div class="t-name">Terra</div><div class="t-status">Asistente · Mediterraneum</div></div>
+  </div>
+  <div class="t-msgs" id="t-msgs">
+    <div class="t-typing" id="t-typing"><div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div></div>
+  </div>
+  <div class="t-input-area">
+    <textarea class="t-input" id="t-input" placeholder="Escribe tu mensaje..." rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();tEnviar()}"
+      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+    <button class="t-send" onclick="tEnviar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1a2e1a" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+  <div class="t-powered">Powered by Terra · Mediterraneum IA</div>
+</div>
+
+<script>
+const TERRA_SYSTEM=`You are Terra, virtual commercial assistant for Mediterraneum, a garden/pool/landscaping company in Andalusia, Spain. Warm, professional tone. Spanish and English. Never invent prices. Business hours Mon-Fri 08:00-15:00 CET. PHASE 1: Get nombre+email, then output JSON. PHASE 2: Get telefono, m2, ubicacion, servicio(jardineria|piscina|paisajismo|mixto). GUARDRAILS: No prices, no visit booking, no chemicals. JSON raw no markdown: Register:{"crm_action":"register","lead_status":"identified","data":{"nombre":"N","email":"E"},"transfer_required":false} Qualified:{"crm_action":"update","lead_status":"qualified","data":{"nombre":"N","email":"E","telefono":"T","m2":0,"ubicacion":"U","servicio":"S"},"summary":"TEXT","transfer_required":false} Handoff:{"crm_action":"update","lead_status":"pending_handoff","data":{"nombre":null,"email":null,"telefono":null,"m2":null,"ubicacion":null,"servicio":null},"summary":"REASON","transfer_required":true}`;
+let tConv=[],tOpen=false,tGeminiKey=localStorage.getItem("terra_gemini_key");
+
+function mostrarTerra(){
+  document.getElementById("t-btn").style.display="flex";
+  setTimeout(()=>{
+    document.getElementById("t-badge").style.display="block";
+    setTimeout(()=>document.getElementById("t-badge").style.display="none",6000);
+  },3000);
+  if(!tConv.length)setTimeout(()=>tAgregar("terra","Hola, soy **Terra**, asistente de Mediterraneum 🌿\n\n¿En qué puedo ayudarte hoy?"),800);
+}
+
+function tToggle(){
+  tOpen=!tOpen;
+  document.getElementById("t-window").classList.toggle("open",tOpen);
+  document.getElementById("t-btn").classList.toggle("open",tOpen);
+  if(tOpen){document.getElementById("t-badge").style.display="none";setTimeout(()=>document.getElementById("t-input").focus(),350);}
+}
+
+function tAgregar(tipo,texto){
+  const msgs=document.getElementById("t-msgs"),typing=document.getElementById("t-typing");
+  const now=new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
+  const div=document.createElement("div");
+  div.className="t-msg t-msg-"+tipo;
+  const html=texto.replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\n/g,"<br>");
+  div.innerHTML=`<div class="t-bubble">${html}</div><div class="t-time">${now}</div>`;
+  msgs.insertBefore(div,typing);msgs.scrollTop=msgs.scrollHeight;
+}
+
+function tLeadSaved(txt){
+  const msgs=document.getElementById("t-msgs"),typing=document.getElementById("t-typing");
+  const div=document.createElement("div");div.className="t-lead-saved";
+  div.innerHTML="<span>🌿</span> "+txt;msgs.insertBefore(div,typing);msgs.scrollTop=msgs.scrollHeight;
+}
+
+async function tEnviar(){
+  const input=document.getElementById("t-input"),texto=input.value.trim();
+  if(!texto)return;
+  input.value="";input.style.height="auto";
+  tAgregar("user",texto);
+  tConv.push({role:"user",parts:[{text:texto}]});
+  document.getElementById("t-typing").classList.add("visible");
+  if(!tGeminiKey){
+    document.getElementById("t-typing").classList.remove("visible");
+    const k=window.prompt("Introduce tu Gemini API Key (AIzaSy...):");
+    if(!k)return;
+    tGeminiKey=k.trim();
+    localStorage.setItem("terra_gemini_key",tGeminiKey);
+    document.getElementById("t-typing").classList.add("visible");
+  }
+  try{
+    const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+tGeminiKey,
+      {method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({system_instruction:{parts:[{text:TERRA_SYSTEM}]},contents:tConv,generationConfig:{maxOutputTokens:600,temperature:0.7}})});
+    const data=await res.json();
+    const respuesta=data.candidates?.[0]?.content?.parts?.[0]?.text||"Lo siento, inténtalo de nuevo.";
+    tConv.push({role:"model",parts:[{text:respuesta}]});
+    document.getElementById("t-typing").classList.remove("visible");
+    const jsonMatch=respuesta.match(/\{[\s\S]*?"crm_action"[\s\S]*?\}/g);
+    if(jsonMatch&&sb){for(const jStr of jsonMatch){try{await tProcesarCRM(JSON.parse(jStr));}catch(e){}}}
+    const textoLimpio=respuesta.replace(/\{[\s\S]*?"crm_action"[\s\S]*?\}/g,"").trim();
+    if(textoLimpio)tAgregar("terra",textoLimpio);
+  }catch(e){document.getElementById("t-typing").classList.remove("visible");tAgregar("terra","Lo siento, ha ocurrido un error.");}
+}
+
+async function tProcesarCRM(json){
+  if(!sb||!json.data?.email)return;
+  if(json.crm_action==="register"){
+    const{data:existe}=await sb.from("clientes").select("id").eq("email",json.data.email).maybeSingle();
+    if(!existe){await sb.from("clientes").insert({nombre:json.data.nombre||"Sin nombre",email:json.data.email,status:"pendiente",tipo_servicio:"pendiente",meta:"Lead desde Terra Chat"});tLeadSaved("✓ Lead registrado en CRM");}
+  }
+  if(json.crm_action==="update"){
+    const u={nombre:json.data.nombre,telefono:json.data.telefono,localidad:json.data.ubicacion,tipo_servicio:json.data.servicio||"mantenimiento",status:json.lead_status==="qualified"?"activo":"pendiente",meta:(json.data.m2?json.data.m2+" m² · ":"")+(json.summary||"")};
+    Object.keys(u).forEach(k=>u[k]==null&&delete u[k]);
+    await sb.from("clientes").update(u).eq("email",json.data.email);
+    if(json.lead_status==="qualified")tLeadSaved("✓ Lead cualificado y guardado");
+    if(json.transfer_required)tLeadSaved("📞 Transferido a agente humano");
+  }
+}
+<\/script>
+</body>
+</html>
