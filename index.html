@@ -12,6 +12,7 @@
 <title>Mediterraneum · Suite de Gestión</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
 <style>
 :root{
   --vp:#1a2e1a;--vm:#2d4a2d;--mu:#4a7c59;
@@ -450,7 +451,11 @@ textarea{resize:vertical;min-height:80px}
         <div class="ai-output" id="pres-output">
           <div class="ai-output-header"><span>✦</span> Resultado · IA</div>
           <div class="ai-output-body" id="pres-texto"></div>
-          <div style="margin-top:16px"><button class="btn btn-secondary btn-sm" onclick="guardarPresupuesto()">💾 Guardar en base de datos</button></div>
+          <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm" onclick="guardarPresupuesto()">💾 Guardar en base de datos</button>
+            <button class="btn btn-secondary btn-sm" onclick="copiarTexto(presupuestoActual)">📋 Copiar</button>
+            <button class="btn btn-secondary btn-sm" onclick="descargarPDF(presupuestoActual,document.getElementById('p-cliente').value)">📄 Descargar PDF</button>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -612,6 +617,19 @@ textarea{resize:vertical;min-height:80px}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- MODAL VER PRESUPUESTO -->
+<div class="modal-overlay" id="modal-ver-pres">
+  <div class="modal" style="max-width:640px;width:92%">
+    <button class="modal-close" onclick="cerrarModal('modal-ver-pres')">✕</button>
+    <div class="modal-title" id="vp-titulo">Presupuesto</div>
+    <div id="vp-texto" style="white-space:pre-wrap;font-size:13px;line-height:1.7;color:rgba(245,240,232,.85);max-height:55vh;overflow-y:auto;margin-bottom:16px;padding-right:6px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm" onclick="copiarTexto(presVisto&&presVisto.contenido_ia)">📋 Copiar</button>
+      <button class="btn btn-secondary btn-sm" onclick="descargarPDF(presVisto&&presVisto.contenido_ia,presVisto&&presVisto.cliente_nombre)">📄 Descargar PDF</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ══════════════════════════════════════════════════════
@@ -845,6 +863,7 @@ async function cargarPresupuestos(){
   document.getElementById('kpi-p-acep').textContent=data.filter(p=>p.status==='aceptado').length;
   document.getElementById('kpi-p-pend').textContent=data.filter(p=>p.status==='pendiente').length;
   const lista=document.getElementById('pres-lista');
+  presupuestosCache={};data.forEach(p=>presupuestosCache[p.id]=p);
   if(!data.length){lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:12px 0">No hay presupuestos guardados aún.</p>';return;}
   lista.innerHTML=data.map(p=>`
     <div class="presup-row">
@@ -852,6 +871,7 @@ async function cargarPresupuestos(){
         <div class="presup-cliente">${esc(p.cliente_nombre)}</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <span class="pb-${p.tipo}">${p.tipo==='nuevo'?'Jardín nuevo':'Mantenimiento'}</span>
+          <button style="background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:8px;padding:3px 10px;color:var(--dc);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="verPresupuesto('${p.id}')">👁 Ver</button>
           <select style="background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:3px 8px;color:var(--cr);font-size:11px;cursor:pointer;" onchange="cambiarStatusPres('${p.id}',this.value)">
             <option value="pendiente" ${p.status==='pendiente'?'selected':''}>⏳ Pendiente</option>
             <option value="aceptado" ${p.status==='aceptado'?'selected':''}>✓ Aceptado</option>
@@ -899,6 +919,52 @@ async function cambiarStatusPres(id,status){
   const{error}=await sb.from('presupuestos').update({status}).eq('id',id);
   if(error){mostrarToast('Error: '+error.message);return;}
   mostrarToast('✓ Estado actualizado');cargarPresupuestos();
+}
+
+// ══ VER / COPIAR / PDF PRESUPUESTOS ══
+let presupuestosCache={},presVisto=null;
+
+function verPresupuesto(id){
+  const p=presupuestosCache[id];
+  if(!p)return;
+  presVisto=p;
+  document.getElementById('vp-titulo').textContent='Presupuesto · '+(p.cliente_nombre||'');
+  document.getElementById('vp-texto').textContent=p.contenido_ia||'(Este presupuesto no tiene texto guardado)';
+  abrirModal('modal-ver-pres');
+}
+
+function copiarTexto(texto){
+  if(!texto){mostrarToast('No hay texto que copiar');return;}
+  navigator.clipboard.writeText(texto)
+    .then(()=>mostrarToast('✓ Copiado al portapapeles'))
+    .catch(()=>mostrarToast('No se pudo copiar'));
+}
+
+function descargarPDF(texto,cliente){
+  if(!texto){mostrarToast('Genera primero un presupuesto');return;}
+  if(!window.jspdf){mostrarToast('El generador de PDF no está disponible');return;}
+  const doc=new window.jspdf.jsPDF();
+  const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=18;
+  // Cabecera con la marca
+  doc.setFillColor(26,46,34);doc.rect(0,0,W,28,'F');
+  doc.setTextColor(201,168,76);doc.setFont('helvetica','bold');doc.setFontSize(17);
+  doc.text('MEDITERRANEUM',M,17);
+  doc.setTextColor(245,240,232);doc.setFont('helvetica','normal');doc.setFontSize(9);
+  doc.text('Diseño y mantenimiento de jardines',W-M,17,{align:'right'});
+  doc.setTextColor(60,60,60);doc.setFontSize(10);
+  doc.text('Presupuesto'+(cliente?' · '+cliente:'')+' · '+new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}),M,38);
+  doc.setDrawColor(201,168,76);doc.line(M,42,W-M,42);
+  // Cuerpo: quitamos las marcas de formato (** y #) que pone la IA
+  const limpio=String(texto).replace(/\*\*/g,'').replace(/^#+\s*/gm,'').replace(/^\* /gm,'· ');
+  doc.setTextColor(35,35,35);doc.setFontSize(10);
+  const lineas=doc.splitTextToSize(limpio,W-M*2);
+  let y=50;
+  for(const ln of lineas){
+    if(y>H-18){doc.addPage();y=20;}
+    doc.text(ln,M,y);y+=5.4;
+  }
+  doc.save('Presupuesto_'+String(cliente||'cliente').trim().replace(/\s+/g,'_')+'.pdf');
+  mostrarToast('✓ PDF descargado');
 }
 
 // ══════════════════════════════════════════════════════
