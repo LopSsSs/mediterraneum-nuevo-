@@ -460,6 +460,13 @@ textarea{resize:vertical;min-height:80px}
       </div>
       <div class="card">
         <div class="section-title"><small>Historial</small>Presupuestos guardados</div>
+        <div style="position:relative;margin-bottom:14px">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;opacity:.5;pointer-events:none">🔍</span>
+          <input type="text" id="pres-buscar" placeholder="Buscar por cliente, localidad, tipo o estado..." oninput="renderPresupuestos()"
+            style="width:100%;padding:9px 34px;background:rgba(255,255,255,.05);border:1px solid rgba(201,168,76,.2);border-radius:10px;color:var(--cr);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;box-sizing:border-box">
+          <button onclick="document.getElementById('pres-buscar').value='';renderPresupuestos()" title="Limpiar búsqueda"
+            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(245,240,232,.45);font-size:13px;cursor:pointer;padding:4px">✕</button>
+        </div>
         <div id="pres-lista"><div class="skeleton"></div><div class="skeleton"></div></div>
       </div>
     </div>
@@ -855,6 +862,7 @@ function selTipo(t){
   document.getElementById('campos-mant').style.display=t==='mant'?'':'none';
 }
 
+let presupuestosData=[];
 async function cargarPresupuestos(){
   if(!sb)return;
   const{data}=await sb.from('presupuestos').select('*').order('created_at',{ascending:false});
@@ -862,10 +870,30 @@ async function cargarPresupuestos(){
   document.getElementById('kpi-p-total').textContent=data.length;
   document.getElementById('kpi-p-acep').textContent=data.filter(p=>p.status==='aceptado').length;
   document.getElementById('kpi-p-pend').textContent=data.filter(p=>p.status==='pendiente').length;
-  const lista=document.getElementById('pres-lista');
+  presupuestosData=data;
   presupuestosCache={};data.forEach(p=>presupuestosCache[p.id]=p);
-  if(!data.length){lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:12px 0">No hay presupuestos guardados aún.</p>';return;}
-  lista.innerHTML=data.map(p=>`
+  renderPresupuestos();
+}
+
+function renderPresupuestos(){
+  const lista=document.getElementById('pres-lista');
+  const q=(document.getElementById('pres-buscar')?.value||'').toLowerCase().trim();
+  let datos=presupuestosData;
+  if(q){
+    datos=presupuestosData.filter(p=>{
+      const tipoTxt=p.tipo==='nuevo'?'jardin nuevo':'mantenimiento';
+      const fechaTxt=new Date(p.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}).toLowerCase();
+      const estadoTxt=p.status||'';
+      return (p.cliente_nombre||'').toLowerCase().includes(q)
+        ||(p.cliente_localidad||'').toLowerCase().includes(q)
+        ||tipoTxt.includes(q)||estadoTxt.includes(q)||fechaTxt.includes(q);
+    });
+  }
+  if(!datos.length){
+    lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:12px 0">'+(q?'Sin resultados para "'+esc(q)+'".':'No hay presupuestos guardados aún.')+'</p>';
+    return;
+  }
+  lista.innerHTML=datos.map(p=>`
     <div class="presup-row">
       <div class="presup-head">
         <div class="presup-cliente">${esc(p.cliente_nombre)}</div>
