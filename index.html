@@ -950,7 +950,7 @@ async function guardarPresupuesto(){
   const{error}=await sb.from('presupuestos').insert({
     cliente_nombre:document.getElementById('p-cliente').value||'Sin nombre',
     cliente_localidad:document.getElementById('p-localidad').value||'',
-    tipo:tipoActual, metros:parseFloat(document.getElementById('p-metros').value)||null,
+    tipo:tipoActual==='mant'?'mantenimiento':tipoActual, metros:parseFloat(document.getElementById('p-metros').value)||null,
     descripcion:document.getElementById('p-desc').value||'',
     contenido_ia:presupuestoActual, status:'pendiente',
     created_by:sesionUser.id
