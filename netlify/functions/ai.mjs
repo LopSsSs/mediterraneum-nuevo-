@@ -2,7 +2,7 @@ const ALLOWED_ORIGIN = 'https://mediterraneum.netlify.app';
 
 // El modelo y los límites se fijan aquí, no los decide el cliente
 const MODEL = 'gemini-2.5-flash';
-const MAX_TOKENS = 1024;
+const MAX_TOKENS = 4096;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
@@ -57,7 +57,13 @@ export async function handler(event) {
 
   const payload = {
     contents,
-    generationConfig: { maxOutputTokens: MAX_TOKENS, temperature: 0.7 },
+    // thinkingBudget 0: en gemini-2.5-flash el "razonamiento interno" consume
+    // tokens del límite de salida; lo desactivamos para respuestas completas
+    generationConfig: {
+      maxOutputTokens: MAX_TOKENS,
+      temperature: 0.7,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   };
   if (typeof body.system === 'string') {
     payload.system_instruction = { parts: [{ text: body.system }] };

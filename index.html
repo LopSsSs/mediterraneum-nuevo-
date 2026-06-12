@@ -12,7 +12,7 @@
 <title>Mediterraneum · Suite de Gestión</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <style>
 :root{
   --vp:#1a2e1a;--vm:#2d4a2d;--mu:#4a7c59;
@@ -890,11 +890,55 @@ async function generarPresupuesto(){
   const metros=document.getElementById('p-metros').value||'no indicados';
   const terreno=document.getElementById('p-terreno').value||'no especificado';
   const desc=document.getElementById('p-desc').value||'';
+  const fechaHoy=new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});
   let prompt;
   if(tipoActual==='nuevo'){
-    prompt=`Genera un presupuesto profesional de jardín nuevo para Mediterraneum.\nCliente: ${cliente} | Localidad: ${localidad} | Superficie: ${metros} m² | Terreno: ${terreno}\nEstilo: ${document.getElementById('p-estilo').value} | Riego: ${document.getElementById('p-riego').value} | Urgencia: ${document.getElementById('p-urgencia').value}\nNotas: ${desc}\n\nIncluye: resumen del proyecto, partidas detalladas con precios orientativos, total estimado y condiciones de pago.`;
+    prompt=`Genera un presupuesto profesional y detallado de creación de jardín nuevo para Mediterraneum, empresa de paisajismo en Andalucía.
+
+DATOS DEL PRESUPUESTO:
+Fecha: ${fechaHoy} (escribe esta fecha tal cual; NUNCA escribas marcadores como "[Fecha actual]")
+Cliente: ${cliente} | Localidad: ${localidad} | Superficie: ${metros} m² | Terreno: ${terreno}
+Estilo: ${document.getElementById('p-estilo').value} | Riego: ${document.getElementById('p-riego').value} | Urgencia: ${document.getElementById('p-urgencia').value}
+Notas: ${desc}
+
+ESTRUCTURA OBLIGATORIA:
+1. Cabecera con cliente, localidad y fecha
+2. Resumen del proyecto (3-4 líneas)
+3. PARTIDAS DETALLADAS, cada una con cantidad, precio unitario e importe en euros (precios realistas del mercado andaluz, ajustados a los m² indicados):
+   - Preparación y limpieza del terreno
+   - Movimiento de tierras y nivelación (con maquinaria si la superficie lo requiere)
+   - Aporte de tierra vegetal y enmiendas
+   - Instalación de sistema de riego (tuberías, goteo/aspersores, programador) según lo indicado
+   - Suministro y plantación de especies mediterráneas (árboles, arbustos, tapizantes) con unidades y precios
+   - Césped natural o artificial si encaja con el estilo
+   - Materiales auxiliares (áridos decorativos, mulch, malla antihierbas, bordillos)
+   - Transporte de materiales y retirada de restos a vertedero autorizado
+   - Mano de obra (jornadas de oficial jardinero y peón, con precio por jornada)
+4. SUBTOTAL, IVA 21% y TOTAL en euros
+5. Condiciones: forma de pago (40% a la firma, 40% a mitad de obra, 20% a la entrega), plazo de ejecución estimado y validez del presupuesto 30 días
+
+Si algún dato no se ha indicado, haz una estimación razonable y márcala como "estimado". No inventes datos del cliente. Usa texto claro con secciones, sin tablas markdown.`;
   }else{
-    prompt=`Genera un presupuesto de contrato de mantenimiento para Mediterraneum.\nCliente: ${cliente} | Localidad: ${localidad} | Superficie: ${metros} m² | Estado: ${document.getElementById('p-estado').value}\nFrecuencia: ${document.getElementById('p-freq').value} | Riego: ${document.getElementById('p-riego-m').value}\nNotas: ${desc}\n\nIncluye: trabajos incluidos en cada visita, precio por visita/mes/año, condiciones y permanencia mínima.`;
+    prompt=`Genera un presupuesto profesional y detallado de contrato de mantenimiento de jardín para Mediterraneum, empresa de paisajismo en Andalucía.
+
+DATOS DEL PRESUPUESTO:
+Fecha: ${fechaHoy} (escribe esta fecha tal cual; NUNCA escribas marcadores como "[Fecha actual]")
+Cliente: ${cliente} | Localidad: ${localidad} | Superficie: ${metros} m² | Estado actual: ${document.getElementById('p-estado').value}
+Frecuencia: ${document.getElementById('p-freq').value} | Riego: ${document.getElementById('p-riego-m').value}
+Notas: ${desc}
+
+ESTRUCTURA OBLIGATORIA:
+1. Cabecera con cliente, localidad y fecha
+2. TRABAJOS INCLUIDOS EN CADA VISITA (lista detallada): siega y perfilado de césped, poda de arbustos y setos, desbroce, escarda de malas hierbas, limpieza y retirada de restos vegetales, revisión del sistema de riego según lo contratado, abonado y tratamientos fitosanitarios preventivos según temporada
+3. DESGLOSE ECONÓMICO con precios realistas del mercado andaluz ajustados a los m²:
+   - Precio por visita (mano de obra: horas de jardinero y precio/hora)
+   - Consumibles y materiales (abonos, fitosanitarios, combustible de maquinaria)
+   - Desplazamiento
+   - CUOTA MENSUAL y TOTAL ANUAL
+4. SUBTOTAL, IVA 21% y TOTAL en euros
+5. Condiciones: permanencia mínima 6 meses, trabajos extra (poda de palmeras, podas en altura) presupuestados aparte, forma de pago mensual domiciliada y validez del presupuesto 30 días
+
+Si algún dato no se ha indicado, haz una estimación razonable y márcala como "estimado". No inventes datos del cliente. Usa texto claro con secciones, sin tablas markdown.`;
   }
   mostrarCarga('pres-output','pres-texto');
   try{const r=await callAI(prompt);presupuestoActual=r;mostrarResultado('pres-output','pres-texto',r);}
@@ -940,9 +984,20 @@ function copiarTexto(texto){
     .catch(()=>mostrarToast('No se pudo copiar'));
 }
 
-function descargarPDF(texto,cliente){
+function cargarJsPDF(){
+  return new Promise((ok,ko)=>{
+    if(window.jspdf&&window.jspdf.jsPDF)return ok();
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';
+    s.onload=()=>ok();s.onerror=()=>ko(new Error('CDN'));
+    document.head.appendChild(s);
+  });
+}
+
+async function descargarPDF(texto,cliente){
   if(!texto){mostrarToast('Genera primero un presupuesto');return;}
-  if(!window.jspdf){mostrarToast('El generador de PDF no está disponible');return;}
+  try{await cargarJsPDF();}
+  catch(e){mostrarToast('No se pudo cargar el generador de PDF. Revisa tu conexión.');return;}
   const doc=new window.jspdf.jsPDF();
   const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=18;
   // Cabecera con la marca
