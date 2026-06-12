@@ -1,7 +1,7 @@
 const ALLOWED_ORIGIN = 'https://mediterraneum.netlify.app';
 
 // El modelo y los límites se fijan aquí, no los decide el cliente
-const MODEL = 'gemini-2.0-flash';
+const MODEL = 'gemini-2.5-flash';
 const MAX_TOKENS = 1024;
 
 const corsHeaders = {
