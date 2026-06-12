@@ -25,7 +25,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 /* ══ CAPAS PRINCIPALES ══ */
 .layer{display:none;position:fixed;inset:0;z-index:100;overflow-y:auto}
 .layer.visible{display:block}
-h
+
 /* ══ SETUP (primera vez) ══ */
 #layer-setup{background:var(--vp);display:flex;align-items:center;justify-content:center;padding:20px}
 .setup-box{background:linear-gradient(135deg,#1e361e,#162816);border:1px solid rgba(201,168,76,.4);border-radius:20px;padding:32px;max-width:480px;width:100%;position:relative}
@@ -618,14 +618,14 @@ textarea{resize:vertical;min-height:80px}
 <div class="modal-overlay" id="modal-apikey">
   <div class="modal">
     <button class="modal-close" onclick="cerrarModal('modal-apikey')">✕</button>
-    <div class="modal-title">API Key · Anthropic</div>
+    <div class="modal-title">API Key · Gemini</div>
     <div style="font-size:12px;color:rgba(245,240,232,.45);margin-bottom:16px;line-height:1.6">
-      Introduce tu API key de <strong style="color:var(--dc)">console.anthropic.com</strong><br>
-      Empieza por <code style="background:rgba(201,168,76,.15);padding:2px 6px;border-radius:4px;font-size:11px">sk-ant-...</code>
+      Introduce tu API key de <strong style="color:var(--dc)">aistudio.google.com/apikey</strong><br>
+      Empieza por <code style="background:rgba(201,168,76,.15);padding:2px 6px;border-radius:4px;font-size:11px">AIzaSy...</code>
     </div>
     <div class="field" style="margin-bottom:20px">
       <label>API Key</label>
-      <input type="password" id="apikey-input" placeholder="sk-ant-api03-..." autocomplete="off">
+      <input type="password" id="apikey-input" placeholder="AIzaSy..." autocomplete="off">
     </div>
     <button class="btn btn-primary" onclick="guardarAPIKey()">💾 Guardar API Key</button>
   </div>
@@ -867,7 +867,7 @@ async function cargarPresupuestos(){
   lista.innerHTML=data.map(p=>`
     <div class="presup-row">
       <div class="presup-head">
-        <div class="presup-cliente">${p.cliente_nombre}</div>
+        <div class="presup-cliente">${esc(p.cliente_nombre)}</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <span class="pb-${p.tipo}">${p.tipo==='nuevo'?'Jardín nuevo':'Mantenimiento'}</span>
           <select style="background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:3px 8px;color:var(--cr);font-size:11px;cursor:pointer;" onchange="cambiarStatusPres('${p.id}',this.value)">
@@ -877,7 +877,7 @@ async function cargarPresupuestos(){
           </select>
         </div>
       </div>
-      <div class="presup-meta">${p.cliente_localidad||''} ${p.metros?'· '+p.metros+' m²':''}</div>
+      <div class="presup-meta">${esc(p.cliente_localidad)||''} ${p.metros?'· '+esc(p.metros)+' m²':''}</div>
       <div class="presup-fecha">${new Date(p.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'})}</div>
     </div>`).join('');
 }
@@ -914,7 +914,8 @@ async function guardarPresupuesto(){
 }
 
 async function cambiarStatusPres(id,status){
-  await sb.from('presupuestos').update({status}).eq('id',id);
+  const{error}=await sb.from('presupuestos').update({status}).eq('id',id);
+  if(error){mostrarToast('Error: '+error.message);return;}
   mostrarToast('✓ Estado actualizado');cargarPresupuestos();
 }
 
@@ -930,7 +931,7 @@ async function cargarClientes(){
   document.getElementById('kpi-c-act').textContent=data.filter(c=>c.status==='activo').length;
   document.getElementById('kpi-c-rev').textContent=data.filter(c=>c.status==='revisar').length;
   const sel=document.getElementById('crm-sel');
-  sel.innerHTML='<option value="">— Elige un cliente —</option>'+data.map(c=>`<option value="${c.id}">${c.nombre}${c.localidad?' · '+c.localidad:''}</option>`).join('');
+  sel.innerHTML='<option value="">— Elige un cliente —</option>'+data.map(c=>`<option value="${esc(c.id)}">${esc(c.nombre)}${c.localidad?' · '+esc(c.localidad):''}</option>`).join('');
   renderCli('todos');
 }
 
@@ -940,8 +941,8 @@ function renderCli(filtro){
   if(!datos.length){list.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:12px 0">Sin clientes en esta categoría.</p>';return;}
   list.innerHTML=datos.map(c=>`
     <div class="row-item">
-      <div class="row-avatar">${c.nombre.charAt(0).toUpperCase()}</div>
-      <div class="row-info"><div class="row-name">${c.nombre}</div><div class="row-meta">${[c.localidad,c.meta||c.tipo_servicio].filter(Boolean).join(' · ')}</div></div>
+      <div class="row-avatar">${esc((c.nombre||'?').charAt(0).toUpperCase())}</div>
+      <div class="row-info"><div class="row-name">${esc(c.nombre)}</div><div class="row-meta">${[c.localidad,c.meta||c.tipo_servicio].filter(Boolean).map(esc).join(' · ')}</div></div>
       <div class="row-actions">
         <select class="status-badge s-${c.status}" onchange="cambiarStatusCli('${c.id}',this.value)" style="padding:3px 6px;font-size:10px;width:auto;border-radius:20px;cursor:pointer;">
           <option value="activo" ${c.status==='activo'?'selected':''}>Activo</option>
@@ -959,13 +960,15 @@ function filtrarCli(filtro,el){
 }
 
 async function cambiarStatusCli(id,status){
-  await sb.from('clientes').update({status,updated_at:new Date().toISOString()}).eq('id',id);
+  const{error}=await sb.from('clientes').update({status,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){mostrarToast('Error: '+error.message);return;}
   mostrarToast('✓ Estado actualizado');cargarClientes();
 }
 
 async function eliminarCli(id){
   if(!confirm('¿Eliminar este cliente? No se puede deshacer.'))return;
-  await sb.from('clientes').delete().eq('id',id);
+  const{error}=await sb.from('clientes').delete().eq('id',id);
+  if(error){mostrarToast('Error: '+error.message);return;}
   mostrarToast('✓ Cliente eliminado');cargarClientes();
 }
 
@@ -1004,7 +1007,7 @@ async function cargarMaquinaria(){
   document.getElementById('kpi-m-urg').textContent=data.filter(m=>m.alerta==='urgente').length;
   document.getElementById('kpi-m-ok').textContent=data.filter(m=>m.alerta==='ok').length;
   const sel=document.getElementById('maq-sel');
-  sel.innerHTML=data.map(m=>`<option value="${m.id}">${m.nombre}${m.matricula?' ('+m.matricula+')':''}</option>`).join('');
+  sel.innerHTML=data.map(m=>`<option value="${esc(m.id)}">${esc(m.nombre)}${m.matricula?' ('+esc(m.matricula)+')':''}</option>`).join('');
   const iconMap={vehiculo:'🚐',maquina:'🌿'};
   const aLabel={ok:'OK',pronto:'Pronto',urgente:'Urgente'};
   const pct={ok:25,pronto:65,urgente:88};
@@ -1012,8 +1015,8 @@ async function cargarMaquinaria(){
   document.getElementById('maq-grid').innerHTML=data.map(m=>`
     <div class="maq-card">
       <div class="maq-header"><div class="maq-icon">${iconMap[m.tipo]||'🔧'}</div><div class="maq-alerta a-${m.alerta}">${aLabel[m.alerta]}</div></div>
-      <div class="maq-name">${m.nombre}</div>
-      <div class="maq-meta">${[m.matricula,m.horas_uso?m.horas_uso+' h':null,m.km_uso&&m.km_uso>0?m.km_uso+' km':null].filter(Boolean).join(' · ')}</div>
+      <div class="maq-name">${esc(m.nombre)}</div>
+      <div class="maq-meta">${[m.matricula,m.horas_uso?m.horas_uso+' h':null,m.km_uso&&m.km_uso>0?m.km_uso+' km':null].filter(Boolean).map(esc).join(' · ')}</div>
       <div class="prog-bar"><div class="prog-fill ${fill[m.alerta]}" style="width:${pct[m.alerta]}%"></div></div>
     </div>`).join('');
 }
@@ -1056,7 +1059,10 @@ async function cargarRutas(){
     if(!data||!data.length){
       content.innerHTML='<div class="ruta-hoy-empty"><div class="icon">🗺️</div><p>No hay ruta planificada para hoy.<br>Consulta con tu responsable.</p></div>';
     }else{
-      content.innerHTML=`<div class="ruta-hoy-content">${data[0].plan_ia||data[0].trabajos||'Sin detalles'}</div>`;
+      const div=document.createElement('div');
+      div.className='ruta-hoy-content';
+      div.textContent=data[0].plan_ia||data[0].trabajos||'Sin detalles';
+      content.innerHTML='';content.appendChild(div);
     }
     return;
   }
@@ -1075,11 +1081,11 @@ async function cargarRutas(){
       <div class="ruta-color" style="background:${colors[i%4]}"></div>
       <div class="ruta-info">
         <div class="ruta-name">Jornada · ${new Date(r.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}</div>
-        <div class="ruta-sub">${r.base_salida||''} · ${(r.trabajos||'').substring(0,60)}${(r.trabajos||'').length>60?'...':''}</div>
+        <div class="ruta-sub">${esc(r.base_salida)||''} · ${esc((r.trabajos||'').substring(0,60))}${(r.trabajos||'').length>60?'...':''}</div>
       </div>
       <div class="ruta-stats">
-        <div><div class="stat-val">${r.km_estimados||'—'}</div><div class="stat-lbl">km</div></div>
-        <div><div class="stat-val">${(r.hora_inicio||'—').substring(0,5)}</div><div class="stat-lbl">inicio</div></div>
+        <div><div class="stat-val">${esc(r.km_estimados)||'—'}</div><div class="stat-lbl">km</div></div>
+        <div><div class="stat-val">${esc((r.hora_inicio||'—').substring(0,5))}</div><div class="stat-lbl">inicio</div></div>
       </div>
     </div>`).join('');
 }
@@ -1129,10 +1135,10 @@ async function cargarUsuariosAdmin(){
     return `
     <div class="admin-user-card" id="ucard-${u.id}">
       <div class="admin-user-header">
-        <div class="row-avatar">${(u.nombre||u.email||'?').charAt(0).toUpperCase()}</div>
+        <div class="row-avatar">${esc((u.nombre||u.email||'?').charAt(0).toUpperCase())}</div>
         <div class="admin-user-info">
-          <div class="admin-user-name">${u.nombre||'Sin nombre'} ${isSelf?'<span style="font-size:11px;color:var(--do)">(tú)</span>':''}</div>
-          <div class="admin-user-email">${u.email}</div>
+          <div class="admin-user-name">${esc(u.nombre)||'Sin nombre'} ${isSelf?'<span style="font-size:11px;color:var(--do)">(tú)</span>':''}</div>
+          <div class="admin-user-email">${esc(u.email)}</div>
         </div>
         <span class="status-badge ${rolBadge}">${rolLabel}</span>
       </div>
@@ -1182,30 +1188,37 @@ async function togglePermiso(userId,mod){
 }
 
 // ══════════════════════════════════════════════════════
-// API IA
+// API IA (Gemini)
 // ══════════════════════════════════════════════════════
 async function callAI(prompt){
-  const res=await fetch('/.netlify/functions/ai',{
+  let apiKey=localStorage.getItem('gemini_key');
+  if(!apiKey){
+    abrirModal('modal-apikey');
+    throw new Error('Introduce tu API Key en el formulario que acaba de abrirse');
+  }
+  const systemPrompt='Eres el asistente de IA de Mediterraneum, empresa de jardines en Andalucía. Respondes siempre en español, de forma profesional y concisa. Tus respuestas son concretas y listas para usar en el negocio.';
+  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+apiKey,{
     method:'POST',
-    headers:{
-      'Content-Type':'application/json'
-    },
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:'claude-sonnet-4-5',max_tokens:1000,
-      system:'Eres el asistente de IA de Mediterraneum, empresa de jardines en Andalucía. Respondes siempre en español, de forma profesional y concisa. Tus respuestas son concretas y listas para usar en el negocio.',
-      messages:[{role:'user',content:prompt}]
+      system_instruction:{parts:[{text:systemPrompt}]},
+      contents:[{role:'user',parts:[{text:prompt}]}],
+      generationConfig:{maxOutputTokens:1000,temperature:0.7}
     })
   });
   const d=await res.json();
   if(d.error){
-    throw new Error(d.error.message||d.error);
+    if(d.error.code===400||d.error.code===401){localStorage.removeItem('gemini_key');}
+    throw new Error(d.error.message||'Error Gemini API');
   }
-  return d.content?.[0]?.text||'Sin respuesta.';
+  return d.candidates?.[0]?.content?.parts?.[0]?.text||'Sin respuesta.';
 }
 
 // ══════════════════════════════════════════════════════
 // UI HELPERS
 // ══════════════════════════════════════════════════════
+// Escapa HTML para prevenir XSS al insertar datos externos con innerHTML
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function mostrarCarga(oid,tid){
   const o=document.getElementById(oid),t=document.getElementById(tid);
   o.classList.add('visible');
@@ -1228,14 +1241,14 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').cat
 
 // ══ API KEY CONFIG ══
 function configurarAPIKey(){
-  const actual=localStorage.getItem('anthropic_key');
+  const actual=localStorage.getItem('gemini_key');
   if(actual) document.getElementById('apikey-input').value=actual;
   abrirModal('modal-apikey');
 }
 function guardarAPIKey(){
   const key=document.getElementById('apikey-input').value.trim();
   if(!key){mostrarToast('Introduce una API key');return;}
-  localStorage.setItem('anthropic_key',key);
+  localStorage.setItem('gemini_key',key);
   cerrarModal('modal-apikey');
   mostrarToast('✓ API Key guardada correctamente');
 }
@@ -1337,7 +1350,7 @@ function tAgregar(tipo,texto){
   const now=new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
   const div=document.createElement("div");
   div.className="t-msg t-msg-"+tipo;
-  const html=texto.replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\n/g,"<br>");
+  const html=esc(texto).replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/\n/g,"<br>");
   div.innerHTML=`<div class="t-bubble">${html}</div><div class="t-time">${now}</div>`;
   msgs.insertBefore(div,typing);msgs.scrollTop=msgs.scrollHeight;
 }
@@ -1346,6 +1359,37 @@ function tLeadSaved(txt){
   const msgs=document.getElementById("t-msgs"),typing=document.getElementById("t-typing");
   const div=document.createElement("div");div.className="t-lead-saved";
   div.innerHTML="<span>🌿</span> "+txt;msgs.insertBefore(div,typing);msgs.scrollTop=msgs.scrollHeight;
+}
+
+// Extrae objetos JSON con llaves balanceadas (la regex anterior cortaba en la
+// primera "}" y rompía los JSON con objetos anidados como "data":{...})
+function tExtraerJSONs(txt){
+  const out=[];let i=0;
+  while((i=txt.indexOf("{",i))!==-1){
+    let depth=0,inStr=false,escNext=false,j=i;
+    for(;j<txt.length;j++){
+      const ch=txt[j];
+      if(inStr){
+        if(escNext)escNext=false;
+        else if(ch==="\\")escNext=true;
+        else if(ch==='"')inStr=false;
+      }else{
+        if(ch==='"')inStr=true;
+        else if(ch==="{")depth++;
+        else if(ch==="}"){depth--;if(depth===0){j++;break;}}
+      }
+    }
+    const raw=txt.slice(i,j);
+    if(raw.includes('"crm_action"')){
+      let json=null;
+      try{json=JSON.parse(raw);}catch(e){}
+      out.push({raw,json});
+      i=j;
+    }else{
+      i=i+1;
+    }
+  }
+  return out;
 }
 
 async function tEnviar(){
@@ -1371,9 +1415,11 @@ async function tEnviar(){
     const respuesta=data.candidates?.[0]?.content?.parts?.[0]?.text||"Lo siento, inténtalo de nuevo.";
     tConv.push({role:"model",parts:[{text:respuesta}]});
     document.getElementById("t-typing").classList.remove("visible");
-    const jsonMatch=respuesta.match(/\{[\s\S]*?"crm_action"[\s\S]*?\}/g);
-    if(jsonMatch&&sb){for(const jStr of jsonMatch){try{await tProcesarCRM(JSON.parse(jStr));}catch(e){}}}
-    const textoLimpio=respuesta.replace(/\{[\s\S]*?"crm_action"[\s\S]*?\}/g,"").trim();
+    const encontrados=tExtraerJSONs(respuesta);
+    if(sb){for(const it of encontrados){if(it.json){try{await tProcesarCRM(it.json);}catch(e){}}}}
+    let textoLimpio=respuesta;
+    for(const it of encontrados)textoLimpio=textoLimpio.replace(it.raw,"");
+    textoLimpio=textoLimpio.replace(/```(json)?/g,"").trim();
     if(textoLimpio)tAgregar("terra",textoLimpio);
   }catch(e){document.getElementById("t-typing").classList.remove("visible");tAgregar("terra","Lo siento, ha ocurrido un error.");}
 }
