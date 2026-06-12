@@ -392,7 +392,6 @@ textarea{resize:vertical;min-height:80px}
         <div class="user-info"><div class="user-name" id="sb-nombre">—</div><div class="user-role" id="sb-rol">—</div></div>
       </div>
       <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
-      <button style="width:100%;padding:7px;margin-top:6px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:var(--dc);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;letter-spacing:.05em" onclick="configurarAPIKey()">⚙️ API Key IA</button>
     </div>
   </nav>
 
@@ -613,23 +612,6 @@ textarea{resize:vertical;min-height:80px}
 </div>
 
 <div class="toast" id="toast"></div>
-
-<!-- MODAL API KEY -->
-<div class="modal-overlay" id="modal-apikey">
-  <div class="modal">
-    <button class="modal-close" onclick="cerrarModal('modal-apikey')">✕</button>
-    <div class="modal-title">API Key · Gemini</div>
-    <div style="font-size:12px;color:rgba(245,240,232,.45);margin-bottom:16px;line-height:1.6">
-      Introduce tu API key de <strong style="color:var(--dc)">aistudio.google.com/apikey</strong><br>
-      Empieza por <code style="background:rgba(201,168,76,.15);padding:2px 6px;border-radius:4px;font-size:11px">AIzaSy...</code>
-    </div>
-    <div class="field" style="margin-bottom:20px">
-      <label>API Key</label>
-      <input type="password" id="apikey-input" placeholder="AIzaSy..." autocomplete="off">
-    </div>
-    <button class="btn btn-primary" onclick="guardarAPIKey()">💾 Guardar API Key</button>
-  </div>
-</div>
 
 <script>
 // ══════════════════════════════════════════════════════
@@ -1188,30 +1170,23 @@ async function togglePermiso(userId,mod){
 }
 
 // ══════════════════════════════════════════════════════
-// API IA (Gemini)
+// API IA (función Netlify → Claude; la API key vive en el servidor)
 // ══════════════════════════════════════════════════════
 async function callAI(prompt){
-  let apiKey=localStorage.getItem('gemini_key');
-  if(!apiKey){
-    abrirModal('modal-apikey');
-    throw new Error('Introduce tu API Key en el formulario que acaba de abrirse');
-  }
   const systemPrompt='Eres el asistente de IA de Mediterraneum, empresa de jardines en Andalucía. Respondes siempre en español, de forma profesional y concisa. Tus respuestas son concretas y listas para usar en el negocio.';
-  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+apiKey,{
+  const res=await fetch('/api/ai',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      system_instruction:{parts:[{text:systemPrompt}]},
-      contents:[{role:'user',parts:[{text:prompt}]}],
-      generationConfig:{maxOutputTokens:1000,temperature:0.7}
+      system:systemPrompt,
+      messages:[{role:'user',content:prompt}]
     })
   });
   const d=await res.json();
-  if(d.error){
-    if(d.error.code===400||d.error.code===401){localStorage.removeItem('gemini_key');}
-    throw new Error(d.error.message||'Error Gemini API');
+  if(!res.ok||d.type==='error'||d.error){
+    throw new Error(d.error?.message||d.error||('Error IA ('+res.status+')'));
   }
-  return d.candidates?.[0]?.content?.parts?.[0]?.text||'Sin respuesta.';
+  return d.content?.[0]?.text||'Sin respuesta.';
 }
 
 // ══════════════════════════════════════════════════════
@@ -1238,20 +1213,6 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
 });
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
-
-// ══ API KEY CONFIG ══
-function configurarAPIKey(){
-  const actual=localStorage.getItem('gemini_key');
-  if(actual) document.getElementById('apikey-input').value=actual;
-  abrirModal('modal-apikey');
-}
-function guardarAPIKey(){
-  const key=document.getElementById('apikey-input').value.trim();
-  if(!key){mostrarToast('Introduce una API key');return;}
-  localStorage.setItem('gemini_key',key);
-  cerrarModal('modal-apikey');
-  mostrarToast('✓ API Key guardada correctamente');
-}
 </script>
 
 <!-- ══ TERRA WIDGET ══ -->
@@ -1327,7 +1288,7 @@ function guardarAPIKey(){
 
 <script>
 const TERRA_SYSTEM=`You are Terra, virtual commercial assistant for Mediterraneum, a garden/pool/landscaping company in Andalusia, Spain. Warm, professional tone. Spanish and English. Never invent prices. Business hours Mon-Fri 08:00-15:00 CET. PHASE 1: Get nombre+email, then output JSON. PHASE 2: Get telefono, m2, ubicacion, servicio(jardineria|piscina|paisajismo|mixto). GUARDRAILS: No prices, no visit booking, no chemicals. JSON raw no markdown: Register:{"crm_action":"register","lead_status":"identified","data":{"nombre":"N","email":"E"},"transfer_required":false} Qualified:{"crm_action":"update","lead_status":"qualified","data":{"nombre":"N","email":"E","telefono":"T","m2":0,"ubicacion":"U","servicio":"S"},"summary":"TEXT","transfer_required":false} Handoff:{"crm_action":"update","lead_status":"pending_handoff","data":{"nombre":null,"email":null,"telefono":null,"m2":null,"ubicacion":null,"servicio":null},"summary":"REASON","transfer_required":true}`;
-let tConv=[],tOpen=false,tGeminiKey=localStorage.getItem("terra_gemini_key");
+let tConv=[],tOpen=false;
 
 function mostrarTerra(){
   document.getElementById("t-btn").style.display="flex";
@@ -1397,23 +1358,16 @@ async function tEnviar(){
   if(!texto)return;
   input.value="";input.style.height="auto";
   tAgregar("user",texto);
-  tConv.push({role:"user",parts:[{text:texto}]});
+  tConv.push({role:"user",content:texto});
   document.getElementById("t-typing").classList.add("visible");
-  if(!tGeminiKey){
-    document.getElementById("t-typing").classList.remove("visible");
-    const k=window.prompt("Introduce tu Gemini API Key (AIzaSy...):");
-    if(!k)return;
-    tGeminiKey=k.trim();
-    localStorage.setItem("terra_gemini_key",tGeminiKey);
-    document.getElementById("t-typing").classList.add("visible");
-  }
   try{
-    const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+tGeminiKey,
+    const res=await fetch("/api/ai",
       {method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({system_instruction:{parts:[{text:TERRA_SYSTEM}]},contents:tConv,generationConfig:{maxOutputTokens:600,temperature:0.7}})});
+      body:JSON.stringify({system:TERRA_SYSTEM,messages:tConv})});
     const data=await res.json();
-    const respuesta=data.candidates?.[0]?.content?.parts?.[0]?.text||"Lo siento, inténtalo de nuevo.";
-    tConv.push({role:"model",parts:[{text:respuesta}]});
+    if(!res.ok||data.type==="error")throw new Error(data.error?.message||"Error IA");
+    const respuesta=data.content?.[0]?.text||"Lo siento, inténtalo de nuevo.";
+    tConv.push({role:"assistant",content:respuesta});
     document.getElementById("t-typing").classList.remove("visible");
     const encontrados=tExtraerJSONs(respuesta);
     if(sb){for(const it of encontrados){if(it.json){try{await tProcesarCRM(it.json);}catch(e){}}}}
