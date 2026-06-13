@@ -497,7 +497,17 @@ textarea{resize:vertical;min-height:80px}
             <select id="crm-accion"><option>Historial y próximas acciones</option><option>Oportunidad de upsell</option><option>Mensaje de seguimiento</option><option>Análisis de rentabilidad</option></select>
           </div>
           <button class="btn btn-primary" onclick="analizarCliente()">✨ Analizar con IA</button>
-          <div class="ai-output" id="crm-output"><div class="ai-output-header"><span>✦</span> Análisis · IA</div><div class="ai-output-body" id="crm-texto"></div></div>
+          <div class="ai-output" id="crm-output">
+            <div class="ai-output-header" style="display:flex;justify-content:space-between;align-items:center">
+              <span><span>✦</span> Análisis · IA</span>
+              <button id="crm-editar" onclick="editarAnalisis()" title="Editar mensaje"
+                style="background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:8px;padding:4px 10px;color:var(--dc);font-size:13px;cursor:pointer">✏️</button>
+            </div>
+            <div class="ai-output-body" id="crm-texto"></div>
+            <div style="margin-top:14px;display:flex;justify-content:flex-end">
+              <button class="btn btn-primary btn-sm" onclick="enviarEmailCRM()">📨 Enviar por email</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -603,6 +613,7 @@ textarea{resize:vertical;min-height:80px}
     <div class="field" style="margin-bottom:14px"><label>Nombre *</label><input type="text" id="mc-nombre" placeholder="Nombre del cliente o empresa"></div>
     <div class="field" style="margin-bottom:14px"><label>Localidad</label><input type="text" id="mc-localidad" placeholder="Localidad"></div>
     <div class="field" style="margin-bottom:14px"><label>Teléfono</label><input type="tel" id="mc-tel" placeholder="Teléfono de contacto"></div>
+    <div class="field" style="margin-bottom:14px"><label>Email</label><input type="email" id="mc-email" placeholder="correo@cliente.com"></div>
     <div class="field" style="margin-bottom:14px"><label>Tipo de servicio</label><select id="mc-tipo"><option value="mantenimiento">Mantenimiento</option><option value="nuevo">Jardín nuevo</option></select></div>
     <div class="field" style="margin-bottom:20px"><label>Notas</label><textarea id="mc-meta" placeholder="Frecuencia, condiciones especiales..."></textarea></div>
     <button class="btn btn-primary" onclick="guardarCliente()">💾 Guardar cliente</button>
@@ -1109,12 +1120,13 @@ async function guardarCliente(){
   const{error}=await sb.from('clientes').insert({
     nombre, localidad:document.getElementById('mc-localidad').value,
     telefono:document.getElementById('mc-tel').value,
+    email:document.getElementById('mc-email').value.trim()||null,
     tipo_servicio:document.getElementById('mc-tipo').value,
     meta:document.getElementById('mc-meta').value, status:'activo'
   });
   if(error){mostrarToast('Error: '+error.message);return;}
   cerrarModal('modal-cliente');mostrarToast('✓ Cliente guardado');cargarClientes();
-  ['mc-nombre','mc-localidad','mc-tel','mc-meta'].forEach(id=>document.getElementById(id).value='');
+  ['mc-nombre','mc-localidad','mc-tel','mc-email','mc-meta'].forEach(id=>document.getElementById(id).value='');
 }
 
 async function analizarCliente(){
@@ -1122,9 +1134,40 @@ async function analizarCliente(){
   if(!id){mostrarToast('Selecciona un cliente');return;}
   const c=todosClientes.find(x=>x.id===id);
   const accion=document.getElementById('crm-accion').value;
+  crmClienteActual=c;
+  if(crmEditando)editarAnalisis(); // salir del modo edición antes de regenerar
   mostrarCarga('crm-output','crm-texto');
-  try{const r=await callAI(`Actúa como gestor comercial de Mediterraneum (jardines mediterráneos, zona Alicante/Valencia/Murcia).\nCliente: ${c.nombre} | Localidad: ${c.localidad||''} | Servicio: ${c.tipo_servicio||''} | Estado: ${c.status} | Notas: ${c.meta||''}\nTarea: ${accion}\n\nSé concreto y accionable.`);mostrarResultado('crm-output','crm-texto',r);}
+  try{const r=await callAI(`Actúa como gestor comercial de Mediterraneum (jardines mediterráneos, zona Alicante/Valencia/Murcia).\nCliente: ${c.nombre} | Localidad: ${c.localidad||''} | Servicio: ${c.tipo_servicio||''} | Estado: ${c.status} | Notas: ${c.meta||''}\nTarea: ${accion}\n\nSé concreto y accionable. Si la tarea es un mensaje de seguimiento, redáctalo listo para enviar por email al cliente, sin marcadores pendientes de rellenar.`);mostrarResultado('crm-output','crm-texto',r);}
   catch(e){mostrarResultado('crm-output','crm-texto','Error de conexión.');}
+}
+
+// ══ EDITAR Y ENVIAR ANÁLISIS POR EMAIL ══
+let crmClienteActual=null,crmEditando=false;
+
+function editarAnalisis(){
+  const t=document.getElementById('crm-texto'),b=document.getElementById('crm-editar');
+  if(!crmEditando&&!t.innerText.trim()){mostrarToast('Genera primero un análisis');return;}
+  crmEditando=!crmEditando;
+  t.contentEditable=crmEditando;
+  t.style.outline=crmEditando?'1px dashed rgba(201,168,76,.6)':'none';
+  t.style.background=crmEditando?'rgba(201,168,76,.06)':'';
+  t.style.borderRadius='8px';
+  b.textContent=crmEditando?'✓':'✏️';
+  b.title=crmEditando?'Terminar edición':'Editar mensaje';
+  if(crmEditando){t.focus();mostrarToast('Modo edición activado: toca el texto y modifícalo');}
+  else mostrarToast('✓ Cambios guardados en el mensaje');
+}
+
+function enviarEmailCRM(){
+  const texto=document.getElementById('crm-texto').innerText.trim();
+  if(!texto||!crmClienteActual){mostrarToast('Genera primero un análisis');return;}
+  if(crmEditando)editarAnalisis(); // cierra el modo edición y conserva los cambios
+  const email=(crmClienteActual.email||'').trim();
+  if(!email){mostrarToast('⚠ '+crmClienteActual.nombre+' no tiene email registrado en la base de datos');return;}
+  const asunto='Mediterraneum · Jardinería y paisajismo';
+  const cuerpo=document.getElementById('crm-texto').innerText.trim().replace(/\*\*/g,'');
+  location.href='mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(cuerpo);
+  mostrarToast('✓ Abriendo tu correo para enviar a '+email);
 }
 
 // ══════════════════════════════════════════════════════
