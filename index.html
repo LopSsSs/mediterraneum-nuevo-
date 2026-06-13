@@ -620,6 +620,21 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- MODAL EDITAR CLIENTE -->
+<div class="modal-overlay" id="modal-editar-cli">
+  <div class="modal">
+    <button class="modal-close" onclick="cerrarModal('modal-editar-cli')">✕</button>
+    <div class="modal-title">Editar Cliente</div>
+    <div class="field" style="margin-bottom:14px"><label>Nombre *</label><input type="text" id="ec-nombre"></div>
+    <div class="field" style="margin-bottom:14px"><label>Localidad</label><input type="text" id="ec-localidad"></div>
+    <div class="field" style="margin-bottom:14px"><label>Teléfono</label><input type="tel" id="ec-tel" placeholder="Teléfono de contacto"></div>
+    <div class="field" style="margin-bottom:14px"><label>Email</label><input type="email" id="ec-email" placeholder="correo@cliente.com"></div>
+    <div class="field" style="margin-bottom:14px"><label>Tipo de servicio</label><select id="ec-tipo"><option value="mantenimiento">Mantenimiento</option><option value="nuevo">Jardín nuevo</option><option value="pendiente">Pendiente</option></select></div>
+    <div class="field" style="margin-bottom:20px"><label>Notas</label><textarea id="ec-meta"></textarea></div>
+    <button class="btn btn-primary" onclick="guardarEdicionCli()">💾 Guardar cambios</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-maquina">
   <div class="modal">
     <button class="modal-close" onclick="cerrarModal('modal-maquina')">✕</button>
@@ -1091,6 +1106,7 @@ function renderCli(filtro){
           <option value="pendiente" ${c.status==='pendiente'?'selected':''}>Pendiente</option>
           <option value="revisar" ${c.status==='revisar'?'selected':''}>Revisar</option>
         </select>
+        <button onclick="editarCli('${c.id}')" title="Editar cliente" style="background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:8px;color:var(--dc);cursor:pointer;font-size:12px;padding:3px 8px;">✏️</button>
         <button onclick="eliminarCli('${c.id}')" style="background:none;border:none;color:rgba(245,240,232,.25);cursor:pointer;font-size:16px;padding:2px 4px;">✕</button>
       </div>
     </div>`).join('');
@@ -1112,6 +1128,41 @@ async function eliminarCli(id){
   const{error}=await sb.from('clientes').delete().eq('id',id);
   if(error){mostrarToast('Error: '+error.message);return;}
   mostrarToast('✓ Cliente eliminado');cargarClientes();
+}
+
+// ══ EDITAR CLIENTE ══
+let editClienteId=null;
+
+function editarCli(id){
+  const c=todosClientes.find(x=>x.id===id);
+  if(!c)return;
+  editClienteId=id;
+  document.getElementById('ec-nombre').value=c.nombre||'';
+  document.getElementById('ec-localidad').value=c.localidad||'';
+  document.getElementById('ec-tel').value=c.telefono||'';
+  document.getElementById('ec-email').value=c.email||'';
+  document.getElementById('ec-tipo').value=c.tipo_servicio||'mantenimiento';
+  document.getElementById('ec-meta').value=c.meta||'';
+  abrirModal('modal-editar-cli');
+}
+
+async function guardarEdicionCli(){
+  if(!sb||!editClienteId)return;
+  const nombre=document.getElementById('ec-nombre').value.trim();
+  if(!nombre){mostrarToast('El nombre es obligatorio');return;}
+  const{error}=await sb.from('clientes').update({
+    nombre,
+    localidad:document.getElementById('ec-localidad').value.trim(),
+    telefono:document.getElementById('ec-tel').value.trim(),
+    email:document.getElementById('ec-email').value.trim()||null,
+    tipo_servicio:document.getElementById('ec-tipo').value,
+    meta:document.getElementById('ec-meta').value.trim(),
+    updated_at:new Date().toISOString()
+  }).eq('id',editClienteId);
+  if(error){mostrarToast('Error: '+error.message);return;}
+  cerrarModal('modal-editar-cli');
+  mostrarToast('✓ Cliente actualizado');
+  cargarClientes();
 }
 
 async function guardarCliente(){

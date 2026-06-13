@@ -1,4 +1,4 @@
-const CACHE = 'mediterraneum-v8';
+const CACHE = 'mediterraneum-v9';
 const FILES = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
