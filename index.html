@@ -622,8 +622,11 @@ select[multiple]{min-height:90px}
           <div class="section-title"><small>Crear nuevo</small>Equipo de trabajo</div>
           <div class="form-grid">
             <div class="field full"><label>Nombre del equipo *</label><input type="text" id="eq-nombre" placeholder="Ej. Equipo Alicante Norte"></div>
-            <div class="field"><label>Trabajador 1</label><input type="text" id="eq-trab1" placeholder="Nombre del trabajador"></div>
-            <div class="field"><label>Trabajador 2</label><input type="text" id="eq-trab2" placeholder="Nombre del trabajador"></div>
+            <div class="field full">
+              <label>Trabajadores del equipo</label>
+              <div id="eq-trabajadores-container" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+              <button type="button" class="btn btn-secondary btn-sm" style="width:auto" onclick="addTrabajadorRow('eq-trabajadores-container')">➕ Añadir trabajador</button>
+            </div>
             <div class="field full"><label>Coche asignado</label><select id="eq-vehiculo"><option value="">— Sin vehículo —</option></select></div>
             <div class="field full"><label>Maquinaria asignada <span style="font-size:10px;color:rgba(245,240,232,.4);text-transform:none;letter-spacing:0">(Ctrl+clic para varios)</span></label><select id="eq-maquinaria" multiple></select></div>
             <div class="field full"><label>Ruta / Zona de trabajo</label><input type="text" id="eq-zona" placeholder="Ej. Comunidades Elda y Petrer"></div>
@@ -707,9 +710,10 @@ select[multiple]{min-height:90px}
     <button class="modal-close" onclick="cerrarModal('modal-equipos-edit')">✕</button>
     <div class="modal-title">Editar Equipo</div>
     <div class="field" style="margin-bottom:14px"><label>Nombre *</label><input type="text" id="eq-edit-nombre" placeholder="Nombre del equipo"></div>
-    <div class="form-grid" style="margin-bottom:0">
-      <div class="field"><label>Trabajador 1</label><input type="text" id="eq-edit-trab1" placeholder="Nombre"></div>
-      <div class="field"><label>Trabajador 2</label><input type="text" id="eq-edit-trab2" placeholder="Nombre"></div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Trabajadores</label>
+      <div id="eq-edit-trabajadores-container" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+      <button type="button" class="btn btn-secondary btn-sm" style="width:auto" onclick="addTrabajadorRow('eq-edit-trabajadores-container')">➕ Añadir trabajador</button>
     </div>
     <div class="field" style="margin-bottom:14px;margin-top:14px"><label>Coche asignado</label><select id="eq-vehiculo-edit"><option value="">— Sin vehículo —</option></select></div>
     <div class="field" style="margin-bottom:14px"><label>Maquinaria <span style="font-size:10px;color:rgba(245,240,232,.4);text-transform:none;letter-spacing:0">(Ctrl+clic para varios)</span></label><select id="eq-maquinaria-edit" multiple style="min-height:90px"></select></div>
@@ -1553,17 +1557,22 @@ async function callAI(prompt){
 let todosEquipos=[];
 let equipoEditId=null;
 let maquinariaCache=[];
+let perfilesCache=[];
 
 async function cargarEquipos(){
   if(!sb)return;
-  const{data:maq}=await sb.from('maquinaria').select('id,nombre,tipo,matricula').eq('activo',true).order('nombre');
+  const[{data:maq},{data:perfs},{data,error}]=await Promise.all([
+    sb.from('maquinaria').select('id,nombre,tipo,matricula').eq('activo',true).order('nombre'),
+    sb.from('perfiles').select('id,nombre,email,rol').order('nombre'),
+    sb.from('equipos').select('*').eq('activo',true).order('nombre')
+  ]);
   if(maq)maquinariaCache=maq;
-  const{data}=await sb.from('equipos').select('*').eq('activo',true).order('nombre');
-  if(!data)return;
-  todosEquipos=data;
-  document.getElementById('kpi-eq-total').textContent=data.length;
-  document.getElementById('kpi-eq-trab').textContent=data.reduce((a,e)=>a+(e.trabajador1?1:0)+(e.trabajador2?1:0),0);
-  document.getElementById('kpi-eq-veh').textContent=data.filter(e=>e.vehiculo_id).length;
+  if(perfs)perfilesCache=perfs.filter(p=>p.rol!=='pendiente');
+  todosEquipos=data||[];
+  const total=todosEquipos.length;
+  document.getElementById('kpi-eq-total').textContent=total;
+  document.getElementById('kpi-eq-trab').textContent=todosEquipos.reduce((a,e)=>a+((e.trabajadores_ids||'').split(',').filter(Boolean).length),0);
+  document.getElementById('kpi-eq-veh').textContent=todosEquipos.filter(e=>e.vehiculo_id).length;
   poblarSelectsEquipo();
   renderEquipos();
 }
@@ -1577,12 +1586,40 @@ function poblarSelectsEquipo(){
   ['eq-maquinaria','eq-maquinaria-edit'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=maqOpts;});
 }
 
+function addTrabajadorRow(containerId,perfId=''){
+  const container=document.getElementById(containerId);
+  if(!container)return;
+  const div=document.createElement('div');
+  div.className='worker-row';
+  div.style.cssText='display:flex;gap:8px;align-items:center';
+  const sel=document.createElement('select');
+  sel.className='eq-worker-sel';
+  sel.style.flex='1';
+  sel.innerHTML='<option value="">— Seleccionar trabajador —</option>'+
+    perfilesCache.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre||p.email)}</option>`).join('');
+  if(perfId)sel.value=perfId;
+  const btn=document.createElement('button');
+  btn.type='button';
+  btn.className='btn btn-danger btn-sm';
+  btn.textContent='✕';
+  btn.onclick=()=>div.remove();
+  div.appendChild(sel);div.appendChild(btn);
+  container.appendChild(div);
+}
+
+function getTrabajadoresFromContainer(containerId){
+  const sels=document.querySelectorAll(`#${containerId} .eq-worker-sel`);
+  const ids=[],names=[];
+  sels.forEach(s=>{if(s.value){ids.push(s.value);names.push(s.options[s.selectedIndex].text);}});
+  return{ids:ids.join(','),names:names.join(', ')};
+}
+
 function renderEquipos(){
   const el=document.getElementById('equipos-lista');
   if(!el)return;
   if(!todosEquipos.length){el.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;text-align:center;padding:24px">No hay equipos creados aún</p>';return;}
   el.innerHTML=todosEquipos.map(e=>{
-    const members=[e.trabajador1,e.trabajador2].filter(Boolean).join(' · ');
+    const members=e.trabajadores_names||'';
     const veh=maquinariaCache.find(m=>m.id===e.vehiculo_id);
     const assets=[];
     if(veh)assets.push(`<span class="equipo-asset">🚐 ${esc(veh.nombre)}</span>`);
@@ -1607,13 +1644,14 @@ function renderEquipos(){
 async function guardarEquipo(){
   const nombre=document.getElementById('eq-nombre').value.trim();
   if(!nombre){mostrarToast('⚠ El nombre del equipo es obligatorio');return;}
+  const{ids:trabIds,names:trabNames}=getTrabajadoresFromContainer('eq-trabajadores-container');
   const maqSel=document.getElementById('eq-maquinaria');
   const maqIds=Array.from(maqSel.selectedOptions).map(o=>o.value).join(',');
   const maqNames=Array.from(maqSel.selectedOptions).map(o=>o.text).join(', ');
   const{error}=await sb.from('equipos').insert({
     nombre,
-    trabajador1:document.getElementById('eq-trab1').value.trim()||null,
-    trabajador2:document.getElementById('eq-trab2').value.trim()||null,
+    trabajadores_ids:trabIds||null,
+    trabajadores_names:trabNames||null,
     vehiculo_id:document.getElementById('eq-vehiculo').value||null,
     maquinaria_ids:maqIds||null,
     maquinaria_names:maqNames||null,
@@ -1622,9 +1660,11 @@ async function guardarEquipo(){
   });
   if(error){mostrarToast('Error: '+error.message);return;}
   mostrarToast('✓ Equipo guardado correctamente');
-  ['eq-nombre','eq-trab1','eq-trab2','eq-zona'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('eq-nombre').value='';
+  document.getElementById('eq-zona').value='';
   document.getElementById('eq-vehiculo').value='';
-  Array.from(document.getElementById('eq-maquinaria').options).forEach(o=>o.selected=false);
+  document.getElementById('eq-trabajadores-container').innerHTML='';
+  Array.from(maqSel.options).forEach(o=>o.selected=false);
   cargarEquipos();
 }
 
@@ -1633,12 +1673,16 @@ function abrirEditarEquipo(id){
   if(!e)return;
   equipoEditId=id;
   document.getElementById('eq-edit-nombre').value=e.nombre||'';
-  document.getElementById('eq-edit-trab1').value=e.trabajador1||'';
-  document.getElementById('eq-edit-trab2').value=e.trabajador2||'';
   document.getElementById('eq-edit-zona').value=e.zona||'';
   document.getElementById('eq-vehiculo-edit').value=e.vehiculo_id||'';
-  const ids=(e.maquinaria_ids||'').split(',').filter(Boolean);
-  Array.from(document.getElementById('eq-maquinaria-edit').options).forEach(o=>o.selected=ids.includes(o.value));
+  const maqIds=(e.maquinaria_ids||'').split(',').filter(Boolean);
+  Array.from(document.getElementById('eq-maquinaria-edit').options).forEach(o=>o.selected=maqIds.includes(o.value));
+  // Poblar trabajadores dinámicos
+  const cont=document.getElementById('eq-edit-trabajadores-container');
+  cont.innerHTML='';
+  const trabIds=(e.trabajadores_ids||'').split(',').filter(Boolean);
+  if(trabIds.length){trabIds.forEach(tid=>addTrabajadorRow('eq-edit-trabajadores-container',tid));}
+  else{addTrabajadorRow('eq-edit-trabajadores-container');}
   abrirModal('modal-equipos-edit');
 }
 
@@ -1646,13 +1690,14 @@ async function guardarEdicionEquipo(){
   if(!equipoEditId)return;
   const nombre=document.getElementById('eq-edit-nombre').value.trim();
   if(!nombre){mostrarToast('⚠ El nombre es obligatorio');return;}
+  const{ids:trabIds,names:trabNames}=getTrabajadoresFromContainer('eq-edit-trabajadores-container');
   const maqSel=document.getElementById('eq-maquinaria-edit');
   const maqIds=Array.from(maqSel.selectedOptions).map(o=>o.value).join(',');
   const maqNames=Array.from(maqSel.selectedOptions).map(o=>o.text).join(', ');
   const{error}=await sb.from('equipos').update({
     nombre,
-    trabajador1:document.getElementById('eq-edit-trab1').value.trim()||null,
-    trabajador2:document.getElementById('eq-edit-trab2').value.trim()||null,
+    trabajadores_ids:trabIds||null,
+    trabajadores_names:trabNames||null,
     vehiculo_id:document.getElementById('eq-vehiculo-edit').value||null,
     maquinaria_ids:maqIds||null,
     maquinaria_names:maqNames||null,
