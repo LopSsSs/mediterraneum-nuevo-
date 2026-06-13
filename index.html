@@ -235,6 +235,15 @@ textarea{resize:vertical;min-height:80px}
 .stat-val{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--dc)}
 .stat-lbl{font-size:10px;color:rgba(245,240,232,.4);letter-spacing:.1em;text-transform:uppercase}
 
+/* ══ EQUIPOS ══ */
+.equipo-card{padding:18px;border-radius:14px;background:#1c321c;border:none;transition:all .2s;box-shadow:4px 4px 10px rgba(0,0,0,.48),-2px -2px 6px rgba(255,255,255,.05);margin-bottom:10px}
+.equipo-header{display:flex;justify-content:space-between;align-items:flex-start}
+.equipo-nombre{font-size:14px;font-weight:500;color:var(--cr);margin-bottom:4px}
+.equipo-members{font-size:12px;color:rgba(245,240,232,.65);margin-bottom:4px}
+.equipo-assets{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+.equipo-asset{font-size:11px;color:rgba(201,168,76,.75);background:rgba(201,168,76,.08);padding:3px 9px;border-radius:20px;border:1px solid rgba(201,168,76,.18)}
+select[multiple]{min-height:90px}
+
 /* ══ PRESUP LISTA ══ */
 .presup-row{padding:14px 18px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.1);margin-bottom:8px}
 .presup-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px}
@@ -400,6 +409,7 @@ textarea{resize:vertical;min-height:80px}
       <div class="nav-item" id="nav-crm" onclick="goTo('crm',this)"><div class="nav-icon">🤝</div><div class="nav-text"><strong>CRM Clientes</strong><span>Seguimiento · Alertas</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-maquinaria" onclick="goTo('maquinaria',this)"><div class="nav-icon">⚙️</div><div class="nav-text"><strong>Maquinaria</strong><span>Vehículos · Estado</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-rutas" onclick="goTo('rutas',this)"><div class="nav-icon">🗺️</div><div class="nav-text"><strong>Rutas y Cuadrillas</strong><span>Planificación diaria</span></div><div class="nav-dot"></div></div>
+      <div class="nav-item" id="nav-equipos" onclick="goTo('equipos',this)"><div class="nav-icon">👥</div><div class="nav-text"><strong>Equipos</strong><span>Trabajadores · Flota</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-admin" onclick="goTo('admin',this)" style="display:none"><div class="nav-icon">👑</div><div class="nav-text"><strong>Administración</strong><span>Usuarios · Permisos</span></div><div class="nav-dot"></div></div>
     </div>
     <div class="sidebar-footer">
@@ -596,6 +606,33 @@ textarea{resize:vertical;min-height:80px}
       </div>
     </div>
 
+    <!-- ═══ MÓDULO EQUIPOS ═══ -->
+    <div class="module" id="mod-equipos">
+      <div class="grid-3">
+        <div class="kpi-card"><div class="kpi-label">Equipos</div><div class="kpi-val" id="kpi-eq-total">—</div><div class="kpi-sub">Total activos</div></div>
+        <div class="kpi-card"><div class="kpi-label">Trabajadores</div><div class="kpi-val" id="kpi-eq-trab">—</div><div class="kpi-sub">Asignados</div></div>
+        <div class="kpi-card"><div class="kpi-label">Con vehículo</div><div class="kpi-val" id="kpi-eq-veh">—</div><div class="kpi-sub">Equipos con coche</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title"><small>Listado</small>Equipos de trabajo</div>
+          <div id="equipos-lista"><div class="skeleton"></div><div class="skeleton"></div></div>
+        </div>
+        <div class="card card-gold">
+          <div class="section-title"><small>Crear nuevo</small>Equipo de trabajo</div>
+          <div class="form-grid">
+            <div class="field full"><label>Nombre del equipo *</label><input type="text" id="eq-nombre" placeholder="Ej. Equipo Alicante Norte"></div>
+            <div class="field"><label>Trabajador 1</label><input type="text" id="eq-trab1" placeholder="Nombre del trabajador"></div>
+            <div class="field"><label>Trabajador 2</label><input type="text" id="eq-trab2" placeholder="Nombre del trabajador"></div>
+            <div class="field full"><label>Coche asignado</label><select id="eq-vehiculo"><option value="">— Sin vehículo —</option></select></div>
+            <div class="field full"><label>Maquinaria asignada <span style="font-size:10px;color:rgba(245,240,232,.4);text-transform:none;letter-spacing:0">(Ctrl+clic para varios)</span></label><select id="eq-maquinaria" multiple></select></div>
+            <div class="field full"><label>Ruta / Zona de trabajo</label><input type="text" id="eq-zona" placeholder="Ej. Comunidades Elda y Petrer"></div>
+          </div>
+          <button class="btn btn-primary" onclick="guardarEquipo()">💾 Guardar equipo</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ MÓDULO ADMIN ═══ -->
     <div class="module" id="mod-admin">
       <div class="grid-3">
@@ -664,6 +701,23 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
+<!-- MODAL EDITAR EQUIPO -->
+<div class="modal-overlay" id="modal-equipos-edit">
+  <div class="modal">
+    <button class="modal-close" onclick="cerrarModal('modal-equipos-edit')">✕</button>
+    <div class="modal-title">Editar Equipo</div>
+    <div class="field" style="margin-bottom:14px"><label>Nombre *</label><input type="text" id="eq-edit-nombre" placeholder="Nombre del equipo"></div>
+    <div class="form-grid" style="margin-bottom:0">
+      <div class="field"><label>Trabajador 1</label><input type="text" id="eq-edit-trab1" placeholder="Nombre"></div>
+      <div class="field"><label>Trabajador 2</label><input type="text" id="eq-edit-trab2" placeholder="Nombre"></div>
+    </div>
+    <div class="field" style="margin-bottom:14px;margin-top:14px"><label>Coche asignado</label><select id="eq-vehiculo-edit"><option value="">— Sin vehículo —</option></select></div>
+    <div class="field" style="margin-bottom:14px"><label>Maquinaria <span style="font-size:10px;color:rgba(245,240,232,.4);text-transform:none;letter-spacing:0">(Ctrl+clic para varios)</span></label><select id="eq-maquinaria-edit" multiple style="min-height:90px"></select></div>
+    <div class="field" style="margin-bottom:20px"><label>Ruta / Zona</label><input type="text" id="eq-edit-zona" placeholder="Ej. Comunidades Elda y Petrer"></div>
+    <button class="btn btn-primary" onclick="guardarEdicionEquipo()">💾 Guardar cambios</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- MODAL VER PRESUPUESTO -->
@@ -696,6 +750,7 @@ const TITULOS = {
   crm:'CRM <em>de Clientes</em>',
   maquinaria:'Maquinaria <em>y Flota</em>',
   rutas:'Rutas <em>y Cuadrillas</em>',
+  equipos:'Equipos <em>de Trabajo</em>',
   admin:'Administración <em>de Usuarios</em>'
 };
 
@@ -835,11 +890,13 @@ function configurarApp(){
     {id:'nav-crm',mod:'crm'},
     {id:'nav-maquinaria',mod:'maquinaria'},
     {id:'nav-rutas',mod:'rutas'},
+    {id:'nav-equipos',mod:'equipos'},
     {id:'nav-admin',mod:'admin'},
   ];
   navItems.forEach(n=>{
     const el=document.getElementById(n.id);
     if(n.mod==='admin'){el.style.display=esAdmin()?'flex':'none';}
+    else if(n.mod==='equipos'){el.style.display=(esAdmin()||tienePerm('equipos'))?'flex':'none';}
     else{el.style.display=tienePerm(n.mod)?'flex':'none';}
   });
 
@@ -848,7 +905,8 @@ function configurarApp(){
     tienePerm('presupuestos')?'presupuestos':
     tienePerm('crm')?'crm':
     tienePerm('maquinaria')?'maquinaria':
-    tienePerm('rutas')?'rutas':'maquinaria';
+    tienePerm('rutas')?'rutas':
+    tienePerm('equipos')?'equipos':'maquinaria';
 
   // Bottom nav móvil
   const bnavItems=[];
@@ -856,6 +914,7 @@ function configurarApp(){
   if(tienePerm('crm')) bnavItems.push({mod:'crm',icon:'🤝',label:'Clientes'});
   if(tienePerm('maquinaria')) bnavItems.push({mod:'maquinaria',icon:'⚙️',label:'Maquinaria'});
   if(tienePerm('rutas')) bnavItems.push({mod:'rutas',icon:'🗺️',label:'Rutas'});
+  if(esAdmin()||tienePerm('equipos')) bnavItems.push({mod:'equipos',icon:'👥',label:'Equipos'});
   if(esAdmin()) bnavItems.push({mod:'admin',icon:'👑',label:'Admin'});
   const cols=bnavItems.length||1;
   const bnav=document.getElementById('bnav-inner');
@@ -903,6 +962,7 @@ async function cargarTodo(){
   if(tienePerm('crm')) proms.push(cargarClientes());
   if(tienePerm('maquinaria')) proms.push(cargarMaquinaria());
   if(tienePerm('rutas')) proms.push(cargarRutas());
+  if(esAdmin()||tienePerm('equipos')) proms.push(cargarEquipos());
   if(esAdmin()) proms.push(cargarUsuariosAdmin());
   await Promise.all(proms);
 }
@@ -1487,6 +1547,131 @@ async function callAI(prompt){
 }
 
 // ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// EQUIPOS
+// ══════════════════════════════════════════════════════
+let todosEquipos=[];
+let equipoEditId=null;
+let maquinariaCache=[];
+
+async function cargarEquipos(){
+  if(!sb)return;
+  const{data:maq}=await sb.from('maquinaria').select('id,nombre,tipo,matricula').eq('activo',true).order('nombre');
+  if(maq)maquinariaCache=maq;
+  const{data}=await sb.from('equipos').select('*').eq('activo',true).order('nombre');
+  if(!data)return;
+  todosEquipos=data;
+  document.getElementById('kpi-eq-total').textContent=data.length;
+  document.getElementById('kpi-eq-trab').textContent=data.reduce((a,e)=>a+(e.trabajador1?1:0)+(e.trabajador2?1:0),0);
+  document.getElementById('kpi-eq-veh').textContent=data.filter(e=>e.vehiculo_id).length;
+  poblarSelectsEquipo();
+  renderEquipos();
+}
+
+function poblarSelectsEquipo(){
+  const vehiculos=maquinariaCache.filter(m=>m.tipo==='vehiculo');
+  const maquinas=maquinariaCache.filter(m=>m.tipo==='maquina');
+  const vehOpts='<option value="">— Sin vehículo —</option>'+vehiculos.map(v=>`<option value="${esc(v.id)}">${esc(v.nombre)}${v.matricula?' ('+esc(v.matricula)+')':''}</option>`).join('');
+  const maqOpts=maquinas.map(m=>`<option value="${esc(m.id)}">${esc(m.nombre)}</option>`).join('');
+  ['eq-vehiculo','eq-vehiculo-edit'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=vehOpts;});
+  ['eq-maquinaria','eq-maquinaria-edit'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=maqOpts;});
+}
+
+function renderEquipos(){
+  const el=document.getElementById('equipos-lista');
+  if(!el)return;
+  if(!todosEquipos.length){el.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;text-align:center;padding:24px">No hay equipos creados aún</p>';return;}
+  el.innerHTML=todosEquipos.map(e=>{
+    const members=[e.trabajador1,e.trabajador2].filter(Boolean).join(' · ');
+    const veh=maquinariaCache.find(m=>m.id===e.vehiculo_id);
+    const assets=[];
+    if(veh)assets.push(`<span class="equipo-asset">🚐 ${esc(veh.nombre)}</span>`);
+    if(e.zona)assets.push(`<span class="equipo-asset">🗺️ ${esc(e.zona)}</span>`);
+    if(e.maquinaria_names)assets.push(`<span class="equipo-asset">⚙️ ${esc(e.maquinaria_names)}</span>`);
+    return `<div class="equipo-card">
+      <div class="equipo-header">
+        <div style="flex:1;min-width:0">
+          <div class="equipo-nombre">👥 ${esc(e.nombre)}</div>
+          ${members?`<div class="equipo-members">👷 ${esc(members)}</div>`:''}
+          ${assets.length?`<div class="equipo-assets">${assets.join('')}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:10px">
+          <button class="btn btn-secondary btn-sm" onclick="abrirEditarEquipo('${esc(e.id)}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="eliminarEquipo('${esc(e.id)}')">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function guardarEquipo(){
+  const nombre=document.getElementById('eq-nombre').value.trim();
+  if(!nombre){mostrarToast('⚠ El nombre del equipo es obligatorio');return;}
+  const maqSel=document.getElementById('eq-maquinaria');
+  const maqIds=Array.from(maqSel.selectedOptions).map(o=>o.value).join(',');
+  const maqNames=Array.from(maqSel.selectedOptions).map(o=>o.text).join(', ');
+  const{error}=await sb.from('equipos').insert({
+    nombre,
+    trabajador1:document.getElementById('eq-trab1').value.trim()||null,
+    trabajador2:document.getElementById('eq-trab2').value.trim()||null,
+    vehiculo_id:document.getElementById('eq-vehiculo').value||null,
+    maquinaria_ids:maqIds||null,
+    maquinaria_names:maqNames||null,
+    zona:document.getElementById('eq-zona').value.trim()||null,
+    activo:true
+  });
+  if(error){mostrarToast('Error: '+error.message);return;}
+  mostrarToast('✓ Equipo guardado correctamente');
+  ['eq-nombre','eq-trab1','eq-trab2','eq-zona'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('eq-vehiculo').value='';
+  Array.from(document.getElementById('eq-maquinaria').options).forEach(o=>o.selected=false);
+  cargarEquipos();
+}
+
+function abrirEditarEquipo(id){
+  const e=todosEquipos.find(x=>x.id===id);
+  if(!e)return;
+  equipoEditId=id;
+  document.getElementById('eq-edit-nombre').value=e.nombre||'';
+  document.getElementById('eq-edit-trab1').value=e.trabajador1||'';
+  document.getElementById('eq-edit-trab2').value=e.trabajador2||'';
+  document.getElementById('eq-edit-zona').value=e.zona||'';
+  document.getElementById('eq-vehiculo-edit').value=e.vehiculo_id||'';
+  const ids=(e.maquinaria_ids||'').split(',').filter(Boolean);
+  Array.from(document.getElementById('eq-maquinaria-edit').options).forEach(o=>o.selected=ids.includes(o.value));
+  abrirModal('modal-equipos-edit');
+}
+
+async function guardarEdicionEquipo(){
+  if(!equipoEditId)return;
+  const nombre=document.getElementById('eq-edit-nombre').value.trim();
+  if(!nombre){mostrarToast('⚠ El nombre es obligatorio');return;}
+  const maqSel=document.getElementById('eq-maquinaria-edit');
+  const maqIds=Array.from(maqSel.selectedOptions).map(o=>o.value).join(',');
+  const maqNames=Array.from(maqSel.selectedOptions).map(o=>o.text).join(', ');
+  const{error}=await sb.from('equipos').update({
+    nombre,
+    trabajador1:document.getElementById('eq-edit-trab1').value.trim()||null,
+    trabajador2:document.getElementById('eq-edit-trab2').value.trim()||null,
+    vehiculo_id:document.getElementById('eq-vehiculo-edit').value||null,
+    maquinaria_ids:maqIds||null,
+    maquinaria_names:maqNames||null,
+    zona:document.getElementById('eq-edit-zona').value.trim()||null,
+  }).eq('id',equipoEditId);
+  if(error){mostrarToast('Error: '+error.message);return;}
+  cerrarModal('modal-equipos-edit');
+  mostrarToast('✓ Equipo actualizado');
+  cargarEquipos();
+}
+
+async function eliminarEquipo(id){
+  if(!confirm('¿Eliminar este equipo?'))return;
+  const{error}=await sb.from('equipos').update({activo:false}).eq('id',id);
+  if(error){mostrarToast('Error: '+error.message);return;}
+  mostrarToast('✓ Equipo eliminado');
+  cargarEquipos();
+}
+
 // UI HELPERS
 // ══════════════════════════════════════════════════════
 // Escapa HTML para prevenir XSS al insertar datos externos con innerHTML
