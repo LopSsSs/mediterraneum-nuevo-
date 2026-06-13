@@ -492,7 +492,7 @@ textarea{resize:vertical;min-height:80px}
         </div>
         <div class="card">
           <div class="section-title"><small>Asistente IA</small>Análisis</div>
-          <div class="field" style="margin-bottom:12px"><label>Cliente</label><select id="crm-sel"><option value="">— Elige un cliente —</option></select></div>
+          <div class="field" style="margin-bottom:12px"><label>Cliente</label><select id="crm-sel" onchange="mostrarAnalisisGuardado()"><option value="">— Elige un cliente —</option></select></div>
           <div class="field" style="margin-bottom:18px"><label>Análisis</label>
             <select id="crm-accion"><option>Historial y próximas acciones</option><option>Oportunidad de upsell</option><option>Mensaje de seguimiento</option><option>Análisis de rentabilidad</option></select>
           </div>
@@ -1137,7 +1137,7 @@ async function analizarCliente(){
   crmClienteActual=c;
   if(crmEditando)editarAnalisis(); // salir del modo edición antes de regenerar
   mostrarCarga('crm-output','crm-texto');
-  try{const r=await callAI(`Actúa como gestor comercial de Mediterraneum (jardines mediterráneos, zona Alicante/Valencia/Murcia).\nCliente: ${c.nombre} | Localidad: ${c.localidad||''} | Servicio: ${c.tipo_servicio||''} | Estado: ${c.status} | Notas: ${c.meta||''}\nTarea: ${accion}\n\nSé concreto y accionable. Si la tarea es un mensaje de seguimiento, redáctalo listo para enviar por email al cliente, sin marcadores pendientes de rellenar.`);mostrarResultado('crm-output','crm-texto',r);}
+  try{const r=await callAI(`Actúa como gestor comercial de Mediterraneum (jardines mediterráneos, zona Alicante/Valencia/Murcia).\nCliente: ${c.nombre} | Localidad: ${c.localidad||''} | Servicio: ${c.tipo_servicio||''} | Estado: ${c.status} | Notas: ${c.meta||''}\nTarea: ${accion}\n\nSé concreto y accionable. Si la tarea es un mensaje de seguimiento, redáctalo listo para enviar por email al cliente, sin marcadores pendientes de rellenar.`);mostrarResultado('crm-output','crm-texto',r);guardarAnalisisBD(false);}
   catch(e){mostrarResultado('crm-output','crm-texto','Error de conexión.');}
 }
 
@@ -1155,7 +1155,31 @@ function editarAnalisis(){
   b.textContent=crmEditando?'✓':'✏️';
   b.title=crmEditando?'Terminar edición':'Editar mensaje';
   if(crmEditando){t.focus();mostrarToast('Modo edición activado: toca el texto y modifícalo');}
-  else mostrarToast('✓ Cambios guardados en el mensaje');
+  else guardarAnalisisBD(true);
+}
+
+async function guardarAnalisisBD(avisar){
+  if(!sb||!crmClienteActual)return;
+  const texto=document.getElementById('crm-texto').innerText.trim();
+  if(!texto)return;
+  const{error}=await sb.from('clientes').update({ultimo_analisis:texto,updated_at:new Date().toISOString()}).eq('id',crmClienteActual.id);
+  if(error){
+    if(/ultimo_analisis/i.test(error.message))mostrarToast('⚠ Falta la columna ultimo_analisis en la base de datos');
+    else mostrarToast('Error al guardar: '+error.message);
+    return;
+  }
+  crmClienteActual.ultimo_analisis=texto;
+  if(avisar)mostrarToast('✓ Cambios guardados, también en la base de datos');
+}
+
+function mostrarAnalisisGuardado(){
+  const id=document.getElementById('crm-sel').value;
+  const c=todosClientes.find(x=>x.id===id);
+  if(c&&c.ultimo_analisis){
+    crmClienteActual=c;
+    if(crmEditando)editarAnalisis();
+    mostrarResultado('crm-output','crm-texto',c.ultimo_analisis);
+  }
 }
 
 function enviarEmailCRM(){
