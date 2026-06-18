@@ -410,6 +410,7 @@ select[multiple]{min-height:90px}
       <div class="nav-item" id="nav-maquinaria" onclick="goTo('maquinaria',this)"><div class="nav-icon">⚙️</div><div class="nav-text"><strong>Maquinaria</strong><span>Vehículos · Estado</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-rutas" onclick="goTo('rutas',this)"><div class="nav-icon">🗺️</div><div class="nav-text"><strong>Rutas y Cuadrillas</strong><span>Planificación diaria</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-equipos" onclick="goTo('equipos',this)"><div class="nav-icon">👥</div><div class="nav-text"><strong>Equipos</strong><span>Trabajadores · Flota</span></div><div class="nav-dot"></div></div>
+      <div class="nav-item" id="nav-asistente" onclick="goTo('asistente',this)"><div class="nav-icon">💬</div><div class="nav-text"><strong>Asistente IA</strong><span>Consulta tus datos</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-admin" onclick="goTo('admin',this)" style="display:none"><div class="nav-icon">👑</div><div class="nav-text"><strong>Administración</strong><span>Usuarios · Permisos</span></div><div class="nav-dot"></div></div>
     </div>
     <div class="sidebar-footer">
@@ -651,6 +652,22 @@ select[multiple]{min-height:90px}
       </div>
     </div>
 
+    <!-- ═══ MÓDULO ASISTENTE IA ═══ -->
+    <div class="module" id="mod-asistente">
+      <div class="card card-gold" style="margin-bottom:16px">
+        <div class="section-title"><small>Pregunta lo que quieras</small>Asistente de datos IA</div>
+        <p style="color:rgba(245,240,232,.55);font-size:13px;line-height:1.55;margin:-6px 0 0">Consulta cualquier dato de la empresa en lenguaje natural y la IA lo busca en la base de datos por ti, sin tener que abrir Excels ni PDFs. Mira presupuestos, clientes, obras, materiales, maquinaria y equipos.<br><strong style="color:var(--dc)">Ejemplos:</strong> «¿Cuántos m³ tiene la piscina de Los Álamos?» · «¿Cuántas plantas de tipo X lleva la obra de Mijas?»</p>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="ia-msgs" style="height:46vh;min-height:300px;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px"></div>
+        <div id="ia-typing" style="display:none;padding:0 18px 12px;color:var(--dc);font-size:13px">Consultando la base de datos…</div>
+        <div style="display:flex;gap:8px;padding:14px;border-top:1px solid rgba(201,168,76,.12);align-items:flex-end">
+          <textarea id="ia-input" rows="1" placeholder="Escribe tu pregunta..." style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 14px;color:var(--cr);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;max-height:120px;min-height:44px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();iaEnviar();}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+          <button class="btn btn-primary" style="width:auto;white-space:nowrap" onclick="iaEnviar()">Enviar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ MÓDULO ADMIN ═══ -->
     <div class="module" id="mod-admin">
       <div class="grid-3">
@@ -777,6 +794,7 @@ const TITULOS = {
   maquinaria:'Maquinaria <em>y Flota</em>',
   rutas:'Rutas <em>y Cuadrillas</em>',
   equipos:'Equipos <em>de Trabajo</em>',
+  asistente:'Asistente <em>de Datos IA</em>',
   admin:'Administración <em>de Usuarios</em>'
 };
 
@@ -917,11 +935,13 @@ function configurarApp(){
     {id:'nav-maquinaria',mod:'maquinaria'},
     {id:'nav-rutas',mod:'rutas'},
     {id:'nav-equipos',mod:'equipos'},
+    {id:'nav-asistente',mod:'asistente'},
     {id:'nav-admin',mod:'admin'},
   ];
   navItems.forEach(n=>{
     const el=document.getElementById(n.id);
     if(n.mod==='admin'){el.style.display=esAdmin()?'flex':'none';}
+    else if(n.mod==='asistente'){el.style.display='flex';}
     else if(n.mod==='equipos'){el.style.display=(esAdmin()||tienePerm('equipos'))?'flex':'none';}
     else{el.style.display=tienePerm(n.mod)?'flex':'none';}
   });
@@ -941,6 +961,7 @@ function configurarApp(){
   if(tienePerm('maquinaria')) bnavItems.push({mod:'maquinaria',icon:'⚙️',label:'Maquinaria'});
   if(tienePerm('rutas')) bnavItems.push({mod:'rutas',icon:'🗺️',label:'Rutas'});
   if(esAdmin()||tienePerm('equipos')) bnavItems.push({mod:'equipos',icon:'👥',label:'Equipos'});
+  bnavItems.push({mod:'asistente',icon:'💬',label:'IA'});
   if(esAdmin()) bnavItems.push({mod:'admin',icon:'👑',label:'Admin'});
   const cols=bnavItems.length||1;
   const bnav=document.getElementById('bnav-inner');
@@ -976,6 +997,7 @@ function goTo(mod,sidebarEl,bnavEl){
   document.getElementById('nav-'+mod)?.classList.add('active');
   const pt=document.getElementById('pageTitle');
   if(pt)pt.innerHTML=TITULOS[mod]||mod;
+  if(mod==='asistente')iaInit();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -1797,6 +1819,116 @@ async function eliminarEquipo(id){
   const{error}=await sb.from('equipos').update({activo:false}).eq('id',id);
   if(error){mostrarToast('Error: '+error.message);return;}
   mostrarToast('✓ Equipo eliminado');cargarEquipos();
+}
+
+// ══════════════════════════════════════════════════════
+// ASISTENTE IA (consulta de datos en lenguaje natural)
+// ══════════════════════════════════════════════════════
+let iaConv=[];
+let iaSnapshot=null;
+let iaSnapshotTime=0;
+
+// Formato básico (negrita, viñetas, saltos) reutilizando esc() anti-XSS
+function iaMd(t){
+  return esc(t)
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^\s*[-*•]\s+/gm,'• ')
+    .replace(/\n/g,'<br>');
+}
+
+function iaAgregar(tipo,texto){
+  const msgs=document.getElementById('ia-msgs');
+  if(!msgs)return;
+  const esUser=tipo==='user';
+  const div=document.createElement('div');
+  div.style.cssText='max-width:88%;align-self:'+(esUser?'flex-end':'flex-start')
+    +';background:'+(esUser?'linear-gradient(135deg,#2d4a2d,#1e361e)':'rgba(255,255,255,.05)')
+    +';border:1px solid rgba(201,168,76,'+(esUser?'.25':'.12')+')'
+    +';border-radius:'+(esUser?'14px 14px 4px 14px':'14px 14px 14px 4px')
+    +';padding:11px 15px;color:var(--cr);font-size:14px;line-height:1.55;word-break:break-word';
+  div.innerHTML=iaMd(texto);
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+function iaInit(){
+  const msgs=document.getElementById('ia-msgs');
+  if(msgs&&!iaConv.length&&!msgs.children.length){
+    iaAgregar('ia','Hola 👋 Soy tu asistente de datos de Mediterraneum. Pregúntame cualquier cosa sobre clientes, obras, presupuestos, materiales, maquinaria o equipos y lo buscaré en la base de datos por ti.');
+  }
+  iaConstruirSnapshot(); // precarga los datos en segundo plano
+}
+
+// Quita campos internos/ruidosos y vacíos de cada fila
+function iaLimpiar(rows){
+  const skip=new Set(['id','created_by','user_id','updated_at']);
+  return (rows||[]).map(r=>{
+    const o={};
+    for(const k in r){ if(!skip.has(k)&&r[k]!=null&&r[k]!=='') o[k]=r[k]; }
+    return o;
+  });
+}
+
+// Construye una "foto" de la base de datos para dársela a la IA como contexto
+async function iaConstruirSnapshot(force){
+  if(!sb)return '';
+  if(iaSnapshot&&!force&&(Date.now()-iaSnapshotTime<120000))return iaSnapshot;
+  const[cli,pre,maq,eq,trab,rut]=await Promise.all([
+    sb.from('clientes').select('*').order('created_at',{ascending:false}),
+    sb.from('presupuestos').select('*').order('created_at',{ascending:false}).limit(80),
+    sb.from('maquinaria').select('*'),
+    sb.from('equipos').select('*').eq('activo',true),
+    sb.from('trabajadores').select('*').eq('activo',true),
+    sb.from('rutas').select('*').order('created_at',{ascending:false}).limit(20)
+  ]);
+  let s='DATOS ACTUALES DE LA EMPRESA (fuente: base de datos de Mediterraneum). Fecha de hoy: '
+    +new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'})+'.\n\n';
+  s+='## CLIENTES ('+(cli.data||[]).length+')\n'+JSON.stringify(iaLimpiar(cli.data))+'\n\n';
+  s+='## PRESUPUESTOS Y OBRAS ('+(pre.data||[]).length+')\nCada presupuesto incluye su detalle completo en "contenido_ia" (partidas, plantas, materiales, riego, piscinas, m³, precios, etc.).\n'+JSON.stringify(iaLimpiar(pre.data))+'\n\n';
+  s+='## MAQUINARIA Y VEHÍCULOS ('+(maq.data||[]).length+')\n'+JSON.stringify(iaLimpiar(maq.data))+'\n\n';
+  s+='## EQUIPOS DE TRABAJO ('+(eq.data||[]).length+')\n'+JSON.stringify(iaLimpiar(eq.data))+'\n\n';
+  s+='## TRABAJADORES ('+(trab.data||[]).length+')\n'+JSON.stringify(iaLimpiar(trab.data))+'\n\n';
+  s+='## RUTAS / CUADRILLAS (últimas '+(rut.data||[]).length+')\n'+JSON.stringify(iaLimpiar(rut.data))+'\n';
+  iaSnapshot=s;
+  iaSnapshotTime=Date.now();
+  return s;
+}
+
+async function iaEnviar(){
+  const input=document.getElementById('ia-input');
+  const texto=(input.value||'').trim();
+  if(!texto)return;
+  input.value='';input.style.height='auto';
+  iaAgregar('user',texto);
+  iaConv.push({role:'user',content:texto});
+  // Limita el historial enviado para no crecer sin control
+  if(iaConv.length>12)iaConv=iaConv.slice(-12);
+  document.getElementById('ia-typing').style.display='block';
+  try{
+    const snapshot=await iaConstruirSnapshot();
+    const sys='Eres el asistente interno de datos de Mediterraneum, una empresa de jardinería, piscinas y paisajismo en Andalucía. Tu función es ayudar a los empleados a encontrar datos consultando ÚNICAMENTE la información de la base de datos que te paso a continuación.\n\n'
+      +'REGLAS:\n'
+      +'- Responde siempre en español, de forma clara, directa y breve.\n'
+      +'- Usa solo los datos proporcionados. Si el dato no aparece, dilo con claridad ("No encuentro ese dato en la base de datos") y sugiere dónde podría estar o qué faltaría registrar. NO inventes precios, medidas ni cantidades.\n'
+      +'- Cuando des una cifra o dato concreto, indica de qué cliente, obra o presupuesto lo has sacado.\n'
+      +'- El detalle de obras (plantas, materiales, piscinas, m³, riego, precios) suele estar dentro del campo "contenido_ia" de cada presupuesto: léelo con atención antes de responder.\n'
+      +'- Si la pregunta es ambigua porque hay varias obras o clientes que coinciden, lista las opciones y pide que concrete.\n\n'
+      +snapshot;
+    const res=await fetch('/api/ai',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system:sys,messages:iaConv})
+    });
+    const d=await res.json();
+    if(!res.ok||d.type==='error'||d.error)throw new Error(d.error?.message||d.error||('Error IA ('+res.status+')'));
+    const resp=d.content?.[0]?.text||'Sin respuesta.';
+    iaConv.push({role:'assistant',content:resp});
+    iaAgregar('ia',resp);
+  }catch(e){
+    iaAgregar('ia','⚠ No he podido consultar los datos: '+e.message);
+  }finally{
+    document.getElementById('ia-typing').style.display='none';
+  }
 }
 
 // UI HELPERS
