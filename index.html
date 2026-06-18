@@ -325,6 +325,12 @@ select[multiple]{min-height:90px}
 </head>
 <body>
 
+<!-- ══ AVISO DE ACTUALIZACIÓN ══ -->
+<div id="update-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:10001;background:linear-gradient(135deg,#2d4a2d,#1e361e);border-bottom:1px solid rgba(201,168,76,.45);padding:10px 16px;align-items:center;justify-content:center;gap:14px;box-shadow:0 4px 16px rgba(0,0,0,.45);flex-wrap:wrap">
+  <span style="font-size:13px;color:var(--cr)">🔄 Hay una nueva versión disponible</span>
+  <button onclick="pwaActualizar()" style="background:linear-gradient(145deg,#d4b055,#a8872e);border:none;border-radius:8px;padding:6px 16px;color:#1a2e1a;font-weight:600;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">Actualizar ahora</button>
+</div>
+
 <!-- ══ SETUP (primera vez) ══ -->
 <div id="layer-setup" class="layer" style="display:none;align-items:center;justify-content:center;padding:20px">
   <div class="setup-box">
@@ -379,6 +385,7 @@ select[multiple]{min-height:90px}
       <div style="margin-top:12px;font-size:12px;color:rgba(245,240,232,.4);text-align:center;line-height:1.6">Tu cuenta quedará pendiente de aprobación.<br>El administrador te activará y asignará permisos.</div>
       <div class="auth-error" id="reg-error"></div>
     </div>
+    <button class="btn-install" onclick="pwaInstalar()" style="display:none;width:100%;margin-top:18px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.35);border-radius:10px;padding:11px;color:var(--dc);font-weight:500;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;align-items:center;justify-content:center;gap:8px">📲 Instalar aplicación</button>
   </div>
 </div>
 
@@ -418,6 +425,7 @@ select[multiple]{min-height:90px}
         <div class="user-avatar" id="sb-avatar">?</div>
         <div class="user-info"><div class="user-name" id="sb-nombre">—</div><div class="user-role" id="sb-rol">—</div></div>
       </div>
+      <button class="btn-install" onclick="pwaInstalar()" style="display:none;width:100%;margin-bottom:10px;background:linear-gradient(145deg,#d4b055,#a8872e);border:none;border-radius:10px;padding:10px;color:#1a2e1a;font-weight:600;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;align-items:center;justify-content:center;gap:8px">📲 Instalar app</button>
       <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
     </div>
   </nav>
@@ -1953,7 +1961,69 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
 });
 
-if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+// ══════════════════════════════════════════════════════
+// PWA: instalación + actualizaciones controladas
+// ══════════════════════════════════════════════════════
+let swReg=null,updateMostrado=false;
+
+function mostrarUpdateBanner(){
+  if(updateMostrado)return;updateMostrado=true;
+  const b=document.getElementById('update-banner');
+  if(b)b.style.display='flex';
+}
+function pwaActualizar(){
+  const b=document.getElementById('update-banner');if(b)b.style.display='none';
+  if(swReg&&swReg.waiting){swReg.waiting.postMessage({type:'SKIP_WAITING'});}
+  else{location.reload();}
+}
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').then(reg=>{
+    swReg=reg;
+    // Ya hay una versión nueva esperando al cargar
+    if(reg.waiting&&navigator.serviceWorker.controller)mostrarUpdateBanner();
+    // Se detecta una versión nueva mientras la app está abierta
+    reg.addEventListener('updatefound',()=>{
+      const nw=reg.installing;if(!nw)return;
+      nw.addEventListener('statechange',()=>{
+        if(nw.state==='installed'&&navigator.serviceWorker.controller){swReg=reg;mostrarUpdateBanner();}
+      });
+    });
+    // Busca actualizaciones al volver a la app y cada hora
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg.update().catch(()=>{});});
+    setInterval(()=>reg.update().catch(()=>{}),60*60*1000);
+  }).catch(()=>{});
+  // Cuando el nuevo SW toma el control, recarga una sola vez
+  let recargado=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(recargado)return;recargado=true;location.reload();
+  });
+}
+
+// ── Instalación de la app (PWA) ──
+let deferredPrompt=null;
+function pwaStandalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}
+function pwaIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent);}
+function pwaActualizarBotones(){
+  const mostrar=(!!deferredPrompt||pwaIOS())&&!pwaStandalone();
+  document.querySelectorAll('.btn-install').forEach(b=>{b.style.display=mostrar?'flex':'none';});
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;pwaActualizarBotones();});
+window.addEventListener('appinstalled',()=>{deferredPrompt=null;pwaActualizarBotones();if(typeof mostrarToast==='function')mostrarToast('✓ Aplicación instalada');});
+async function pwaInstalar(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    try{await deferredPrompt.userChoice;}catch(e){}
+    deferredPrompt=null;pwaActualizarBotones();
+    return;
+  }
+  if(pwaIOS()){
+    alert('Para instalar en iPhone o iPad:\n\n1. Abre esta web en Safari.\n2. Pulsa el botón Compartir (el cuadrado con la flecha ↑) abajo en la barra.\n3. Elige "Añadir a pantalla de inicio".\n4. Pulsa "Añadir".');
+  }else{
+    alert('Para instalar la aplicación:\n\nAbre el menú del navegador (los 3 puntos ⋮ arriba a la derecha) y elige "Instalar aplicación" o "Añadir a la pantalla de inicio".');
+  }
+}
+pwaActualizarBotones();
 </script>
 
 <!-- ══ TERRA WIDGET ══ -->

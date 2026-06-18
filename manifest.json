@@ -3,6 +3,8 @@
   "short_name": "Mediterraneum",
   "description": "Suite de gestión inteligente con IA para Mediterraneum",
   "start_url": "./index.html",
+  "scope": "./",
+  "id": "mediterraneum-suite",
   "display": "standalone",
   "background_color": "#1a2e1a",
   "theme_color": "#1a2e1a",
