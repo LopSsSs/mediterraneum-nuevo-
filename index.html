@@ -988,6 +988,13 @@ function configurarApp(){
   document.getElementById('maq-add-btn').style.display=esAdmin()?'block':'none';
 
   goTo(primero, document.getElementById('nav-'+primero));
+  // Acceso directo desde la app instalada (?go=modulo)
+  try{
+    const sc=new URLSearchParams(location.search).get('go');
+    if(sc&&document.getElementById('mod-'+sc)&&(sc==='asistente'||esAdmin()||tienePerm(sc))){
+      goTo(sc, document.getElementById('nav-'+sc));
+    }
+  }catch(e){}
   if(typeof mostrarTerra==='function') mostrarTerra();
 }
 

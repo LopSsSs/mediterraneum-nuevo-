@@ -23,5 +23,42 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["business", "productivity"]
+  "categories": ["business", "productivity"],
+  "screenshots": [
+    {
+      "src": "screenshot-wide.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Mediterraneum · Suite de Gestión Inteligente con IA"
+    },
+    {
+      "src": "screenshot-mobile.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mediterraneum · Suite de Gestión Inteligente con IA"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Asistente IA",
+      "short_name": "Asistente",
+      "description": "Consulta tus datos en lenguaje natural",
+      "url": "./index.html?go=asistente",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Presupuestos IA",
+      "short_name": "Presupuestos",
+      "url": "./index.html?go=presupuestos",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "CRM Clientes",
+      "short_name": "CRM",
+      "url": "./index.html?go=crm",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
 }
