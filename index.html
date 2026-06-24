@@ -57,6 +57,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:rgba(245,240,232,.12)}
 .auth-error{background:rgba(180,60,60,.2);border:1px solid rgba(180,60,60,.35);border-radius:8px;padding:10px 14px;font-size:13px;color:#e8a0a0;margin-top:12px;display:none}
 .auth-error.visible{display:block}
+.auth-terms{display:flex;align-items:flex-start;gap:9px;margin-top:16px;font-size:12px;color:rgba(245,240,232,.6);line-height:1.5;cursor:pointer;user-select:none}
+.auth-terms input{margin-top:1px;width:16px;height:16px;accent-color:var(--do);flex-shrink:0;cursor:pointer}
+.auth-terms a{color:var(--dc);text-decoration:underline;cursor:pointer}
+.legal-body{font-size:13px;line-height:1.65;color:rgba(245,240,232,.78);max-height:60vh;overflow-y:auto;padding-right:6px}
+.legal-body h4{font-family:'Cormorant Garamond',serif;color:var(--dc);font-size:18px;font-weight:500;margin:18px 0 6px}
+.legal-body p{margin:0 0 10px}
+.legal-body .legal-note{font-size:11px;color:rgba(245,240,232,.45);font-style:italic;border-top:1px solid rgba(245,240,232,.1);padding-top:12px;margin-top:16px}
 
 /* ══ PENDIENTE ══ */
 #layer-pending{background:var(--vp);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -376,9 +383,10 @@ select[multiple]{min-height:90px}
       <div class="auth-field"><label>Nombre completo</label><input type="text" id="reg-nombre" placeholder="Tu nombre"></div>
       <div class="auth-field" style="margin-top:12px"><label>Email</label><input type="email" id="reg-email" placeholder="tu@email.com" autocomplete="email"></div>
       <div class="auth-field" style="margin-top:12px"><label>Contraseña</label><input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+      <label class="auth-terms"><input type="checkbox" id="reg-terms"><span>He leído y acepto los <a onclick="abrirModal('modal-legal');return false">Términos y Condiciones y el Aviso Legal</a> de Mediterraneum.</span></label>
       <button class="auth-btn" style="margin-top:16px" onclick="doRegister()">Crear cuenta</button>
       <div class="auth-divider">o</div>
-      <button class="auth-google" onclick="loginGoogle()">
+      <button class="auth-google" onclick="registrarGoogle()">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.7-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.7-.4-3.9z"/></svg>
         Registrarse con Google
       </button>
@@ -645,7 +653,7 @@ select[multiple]{min-height:90px}
             </div>
             <div class="field full"><label>Coche asignado</label><select id="eq-vehiculo"><option value="">— Sin vehículo —</option></select></div>
             <div class="field full"><label>Maquinaria asignada <span style="font-size:10px;color:rgba(245,240,232,.4);text-transform:none;letter-spacing:0">(Ctrl+clic para varios)</span></label><select id="eq-maquinaria" multiple></select></div>
-            <div class="field full"><label>Ruta / Zona de trabajo</label><input type="text" id="eq-zona" placeholder="Ej. Comunidades Elda y Petrer"></div>
+            <div class="field full"><label>Ruta / Zona de trabajo</label><input type="text" id="eq-zona" placeholder="Ej. Plaza Mayor, Comunidades Elda y Petrer..."></div>
           </div>
           <button class="btn btn-primary" onclick="guardarEquipo()">💾 Guardar equipo</button>
         </div>
@@ -766,6 +774,42 @@ select[multiple]{min-height:90px}
     <div class="field" style="margin-bottom:14px"><label>Maquinaria <span style="font-size:10px;color:rgba(245,240,232,.4);text-transform:none;letter-spacing:0">(Ctrl+clic para varios)</span></label><select id="eq-maquinaria-edit" multiple style="min-height:90px"></select></div>
     <div class="field" style="margin-bottom:20px"><label>Ruta / Zona</label><input type="text" id="eq-edit-zona" placeholder="Ej. Comunidades Elda y Petrer"></div>
     <button class="btn btn-primary" onclick="guardarEdicionEquipo()">💾 Guardar cambios</button>
+  </div>
+</div>
+
+<!-- MODAL TÉRMINOS Y AVISO LEGAL -->
+<div class="modal-overlay" id="modal-legal">
+  <div class="modal" style="max-width:640px;width:92%">
+    <button class="modal-close" onclick="cerrarModal('modal-legal')">✕</button>
+    <div class="modal-title">Términos y Condiciones · Aviso Legal</div>
+    <div class="legal-body">
+      <p><strong>Titular:</strong> Mediterraneum — [Razón social], con NIF/CIF [________] y domicilio en [________], España. Email de contacto: [________].</p>
+
+      <h4>1. Objeto</h4>
+      <p>El presente documento regula el uso de la aplicación de gestión interna de Mediterraneum y las condiciones de prestación de los servicios de jardinería, paisajismo, piscinas y mantenimiento que la empresa ofrece a sus clientes.</p>
+
+      <h4>2. Condiciones del servicio (clientes)</h4>
+      <p>Los presupuestos tienen carácter estimativo y validez de 30 días salvo indicación expresa. La ejecución de los trabajos puede variar por causas no previsibles (estado del terreno, clima, disponibilidad de materiales o plantas). Las cantidades, medidas y precios reflejados se basan en la información facilitada por el cliente y en estimaciones técnicas; cualquier modificación del alcance podrá suponer un ajuste de precio comunicado previamente.</p>
+      <p>El cliente se compromete a facilitar el acceso a la finca y a abonar el importe acordado en los plazos pactados. La falta de pago facultará a Mediterraneum a suspender los trabajos.</p>
+
+      <h4>3. Garantías y limitación de responsabilidad</h4>
+      <p>La garantía sobre plantaciones y materiales se limita a la establecida en cada presupuesto y no cubre daños derivados de un mantenimiento inadecuado por terceros, fenómenos meteorológicos adversos, plagas, vandalismo o uso indebido. Mediterraneum no será responsable de daños indirectos, lucro cesante ni de perjuicios ocasionados por causas de fuerza mayor. La responsabilidad total quedará limitada, en su caso, al importe de los trabajos efectivamente facturados.</p>
+
+      <h4>4. Protección de datos (RGPD / LOPDGDD)</h4>
+      <p>Los datos personales de clientes, contactos y usuarios (nombre, email, teléfono, ubicación e información de las obras) se tratan con la finalidad de gestionar presupuestos, obras, comunicaciones comerciales y la propia herramienta. La base jurídica es la ejecución del contrato y el interés legítimo de Mediterraneum. Los datos se conservan mientras exista relación comercial y las obligaciones legales lo exijan, y se almacenan en proveedores de servicio (Supabase, Netlify) que actúan como encargados del tratamiento. La persona interesada puede ejercer sus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a [________]. No se ceden datos a terceros salvo obligación legal.</p>
+
+      <h4>5. Uso de la aplicación (usuarios internos)</h4>
+      <p>El acceso está restringido a personal autorizado. El usuario se compromete a mantener la confidencialidad de sus credenciales y de los datos de la empresa y clientes a los que acceda, a usar la herramienta únicamente para fines laborales y a no extraer, difundir ni utilizar dicha información fuera del ámbito de su trabajo. El incumplimiento podrá conllevar la suspensión de la cuenta y las acciones que correspondan.</p>
+
+      <h4>6. Aceptación</h4>
+      <p>El registro y uso de la aplicación implica la lectura y aceptación de estos términos. Mediterraneum podrá actualizarlos, comunicando los cambios relevantes a través de la propia aplicación.</p>
+
+      <h4>7. Legislación y jurisdicción</h4>
+      <p>Estas condiciones se rigen por la legislación española. Para cualquier controversia, las partes se someten a los juzgados y tribunales del domicilio del titular, salvo que la normativa de consumo establezca otro fuero.</p>
+
+      <p class="legal-note">⚠ Plantilla orientativa. Antes de publicar, completa los datos entre corchetes [ ] y haz que un abogado o asesor revise el texto para adaptarlo a tu actividad concreta y a la normativa vigente.</p>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px" onclick="cerrarModal('modal-legal')">Cerrar</button>
   </div>
 </div>
 
@@ -890,6 +934,18 @@ async function loginGoogle(){
   if(error){errEl.textContent=error.message;errEl.classList.add('visible');}
 }
 
+// Registro con Google: exige aceptar los términos antes de continuar
+async function registrarGoogle(){
+  const errEl=document.getElementById('reg-error');
+  errEl.classList.remove('visible');
+  if(!document.getElementById('reg-terms').checked){
+    errEl.textContent='Debes leer y aceptar los Términos y el Aviso Legal para continuar';
+    errEl.classList.add('visible');
+    return;
+  }
+  loginGoogle();
+}
+
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim();
   const pass=document.getElementById('login-pass').value;
@@ -908,7 +964,8 @@ async function doRegister(){
   errEl.classList.remove('visible');
   if(!nombre||!email||!pass){errEl.textContent='Completa todos los campos';errEl.classList.add('visible');return;}
   if(pass.length<6){errEl.textContent='La contraseña debe tener al menos 6 caracteres';errEl.classList.add('visible');return;}
-  const{error}=await sb.auth.signUp({email,password:pass,options:{data:{nombre}}});
+  if(!document.getElementById('reg-terms').checked){errEl.textContent='Debes leer y aceptar los Términos y el Aviso Legal para continuar';errEl.classList.add('visible');return;}
+  const{error}=await sb.auth.signUp({email,password:pass,options:{data:{nombre,terminos_aceptados:true,terminos_fecha:new Date().toISOString()}}});
   if(error){errEl.textContent=error.message;errEl.classList.add('visible');return;}
   mostrarToast('✓ Cuenta creada. Espera aprobación del administrador.');
   cambiarTab('login');
@@ -1445,7 +1502,7 @@ async function consultarMaq(){
   const sintoma=document.getElementById('maq-sintoma').value||'ninguno';
   mostrarCarga('maq-output','maq-texto');
   try{const r=await callAI(`Eres técnico de maquinaria de jardín.\nActivo: ${nombre} | Horas/km: ${horas} | Último mantenimiento: ${fecha} | Síntoma: ${sintoma}\n\nIndica: estado estimado, qué revisar ahora, qué planificar próximamente, coste estimado y riesgo de avería (bajo/medio/alto).`);mostrarResultado('maq-output','maq-texto',r);}
-  catch(e){mostrarResultado('maq-output','maq-texto','Error de conexión.');}
+  catch(e){mostrarResultado('maq-output','maq-texto','No se pudo generar la predicción: '+(e.message||'error de conexión con la IA.'));}
 }
 
 // ══════════════════════════════════════════════════════
@@ -1927,7 +1984,8 @@ async function iaEnviar(){
       +'- Usa solo los datos proporcionados. Si el dato no aparece, dilo con claridad ("No encuentro ese dato en la base de datos") y sugiere dónde podría estar o qué faltaría registrar. NO inventes precios, medidas ni cantidades.\n'
       +'- Cuando des una cifra o dato concreto, indica de qué cliente, obra o presupuesto lo has sacado.\n'
       +'- El detalle de obras (plantas, materiales, piscinas, m³, riego, precios) suele estar dentro del campo "contenido_ia" de cada presupuesto: léelo con atención antes de responder.\n'
-      +'- Si la pregunta es ambigua porque hay varias obras o clientes que coinciden, lista las opciones y pide que concrete.\n\n'
+      +'- Si la pregunta es ambigua porque hay varias obras o clientes que coinciden, lista las opciones y pide que concrete.\n'
+      +'- Para saber qué equipo o qué trabajadores están en un sitio o zona (ej. "quién trabaja en Plaza Mayor"), busca en EQUIPOS DE TRABAJO el equipo cuyo campo "zona" coincida con ese lugar, y responde con el nombre del equipo y sus trabajadores ("trabajadores_names").\n\n'
       +snapshot;
     const res=await fetch('/api/ai',{
       method:'POST',

@@ -28,6 +28,10 @@ create table if not exists public.equipos (
   created_at         timestamptz not null default now()
 );
 
+-- Asegura que la columna "zona" existe aunque la tabla "equipos" se hubiera
+-- creado antes (CREATE TABLE IF NOT EXISTS no añade columnas a tablas ya creadas).
+alter table public.equipos add column if not exists zona text;
+
 -- Seguridad a nivel de fila (igual que el resto de tablas de la app)
 alter table public.trabajadores enable row level security;
 alter table public.equipos       enable row level security;

@@ -1,31 +1,68 @@
-const ALLOWED_ORIGIN = 'https://mediterraneum.netlify.app';
-
 // El modelo y los límites se fijan aquí, no los decide el cliente
 const MODEL = 'gemini-2.5-flash';
 const MAX_TOKENS = 4096;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+// Orígenes permitidos. El dominio principal de Netlify, cualquier deploy
+// o preview *.netlify.app, y opcionalmente un dominio propio que se puede
+// configurar en Netlify → Site settings → Environment variables → SITE_ORIGIN.
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (process.env.SITE_ORIGIN && origin === process.env.SITE_ORIGIN) return true;
+  try {
+    const { hostname } = new URL(origin);
+    if (hostname === 'mediterraneum.netlify.app') return true;
+    if (hostname.endsWith('.netlify.app')) return true;
+  } catch {
+    /* el origen no es una URL válida */
+  }
+  return false;
+}
+
+// Cabeceras CORS que DEVUELVEN el origen real de la petición. Si se devuelve
+// un origen fijo distinto al de la web, el navegador bloquea la respuesta y el
+// frontend lo ve como un "error de conexión".
+function corsFor(origin) {
+  return {
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    Vary: 'Origin',
+  };
+}
 
 export async function handler(event) {
+  const origin = event.headers.origin || event.headers.Origin || '';
+  const cors = corsFor(origin);
+
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: corsHeaders, body: '' };
+    return { statusCode: 200, headers: cors, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: corsHeaders, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
   }
 
   // Rechaza peticiones que no vengan de tu web
-  const origin = event.headers.origin || event.headers.Origin || '';
-  if (origin !== ALLOWED_ORIGIN) {
+  if (!isAllowedOrigin(origin)) {
     return {
       statusCode: 403,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Origen no permitido' }),
+      headers: { ...cors, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'error', error: { message: 'Origen no permitido' } }),
+    };
+  }
+
+  // Avisa con claridad si falta la clave en el servidor (causa habitual del fallo)
+  if (!process.env.GEMINI_API_KEY) {
+    return {
+      statusCode: 500,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'error',
+        error: {
+          message:
+            'Falta la clave GEMINI_API_KEY en el servidor. Configúrala en Netlify → Site settings → Environment variables.',
+        },
+      }),
     };
   }
 
@@ -35,8 +72,8 @@ export async function handler(event) {
   } catch {
     return {
       statusCode: 400,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'JSON inválido' }),
+      headers: { ...cors, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'error', error: { message: 'JSON inválido' } }),
     };
   }
 
@@ -44,8 +81,8 @@ export async function handler(event) {
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
     return {
       statusCode: 400,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Falta el campo messages' }),
+      headers: { ...cors, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'error', error: { message: 'Falta el campo messages' } }),
     };
   }
 
@@ -84,7 +121,7 @@ export async function handler(event) {
     if (data.error) {
       return {
         statusCode: response.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'error',
           error: { message: data.error.message || 'Error de Gemini' },
@@ -97,13 +134,13 @@ export async function handler(event) {
 
     return {
       statusCode: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: [{ type: 'text', text }] }),
     };
   } catch (err) {
     return {
       statusCode: 500,
-      headers: corsHeaders,
+      headers: { ...cors, 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'error', error: { message: err.message } }),
     };
   }
