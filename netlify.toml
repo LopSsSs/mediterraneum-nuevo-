@@ -5,3 +5,16 @@
   from = "/api/ai"
   to = "/.netlify/functions/ai"
   status = 200
+
+# Cabeceras de seguridad para toda la web:
+# - CSP: solo permite cargar scripts/estilos/conexiones de los sitios que la app usa
+# - X-Frame-Options / frame-ancestors: nadie puede meter la app en un iframe (clickjacking)
+# - nosniff: el navegador no "adivina" tipos de archivo
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

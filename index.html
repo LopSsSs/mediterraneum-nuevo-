@@ -12,7 +12,7 @@
 <title>Mediterraneum · Suite de Gestión</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<!-- jsPDF se carga solo al descargar un PDF (ver cargarJsPDF): arranque más ligero -->
 <style>
 :root{
   --vp:#1a2e1a;--vm:#2d4a2d;--mu:#4a7c59;
@@ -496,7 +496,7 @@ select[multiple]{min-height:90px}
           <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-secondary btn-sm" onclick="guardarPresupuesto()">💾 Guardar en base de datos</button>
             <button class="btn btn-secondary btn-sm" onclick="copiarTexto(presupuestoActual)">📋 Copiar</button>
-            <button class="btn btn-secondary btn-sm" onclick="descargarPDF(presupuestoActual,document.getElementById('p-cliente').value)">📄 Descargar PDF</button>
+            <button class="btn btn-secondary btn-sm" onclick="descargarPDF(presupuestoActual,$('p-cliente').value)">📄 Descargar PDF</button>
           </div>
         </div>
       </div>
@@ -506,7 +506,7 @@ select[multiple]{min-height:90px}
           <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;opacity:.5;pointer-events:none">🔍</span>
           <input type="text" id="pres-buscar" placeholder="Buscar por cliente, localidad, tipo o estado..." oninput="renderPresupuestos()"
             style="width:100%;padding:9px 34px;background:rgba(255,255,255,.05);border:1px solid rgba(201,168,76,.2);border-radius:10px;color:var(--cr);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;box-sizing:border-box">
-          <button onclick="document.getElementById('pres-buscar').value='';renderPresupuestos()" title="Limpiar búsqueda"
+          <button onclick="$('pres-buscar').value='';renderPresupuestos()" title="Limpiar búsqueda"
             style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(245,240,232,.45);font-size:13px;cursor:pointer;padding:4px">✕</button>
         </div>
         <div id="pres-lista"><div class="skeleton"></div><div class="skeleton"></div></div>
@@ -648,7 +648,7 @@ select[multiple]{min-height:90px}
               </div>
               <div style="display:flex;gap:8px">
                 <input type="text" id="eq-trab-nuevo" placeholder="Nombre trabajador nuevo..." style="flex:1">
-                <button type="button" class="btn btn-success btn-sm" style="white-space:nowrap;flex-shrink:0" onclick="crearYAddTrabajador('eq-trabajadores-container','eq-trab-nuevo',['eq-trab-sel','eq-edit-trab-sel'])">✚ Crear</button>
+                <button type="button" class="btn btn-success btn-sm" style="white-space:nowrap;flex-shrink:0" onclick="crearYAddTrabajador('eq-trabajadores-container','eq-trab-nuevo')">✚ Crear</button>
               </div>
             </div>
             <div class="field full"><label>Coche asignado</label><select id="eq-vehiculo"><option value="">— Sin vehículo —</option></select></div>
@@ -767,7 +767,7 @@ select[multiple]{min-height:90px}
       </div>
       <div style="display:flex;gap:8px">
         <input type="text" id="eq-edit-trab-nuevo" placeholder="Nombre trabajador nuevo...">
-        <button type="button" class="btn btn-success btn-sm" style="white-space:nowrap;flex-shrink:0" onclick="crearYAddTrabajador('eq-edit-trabajadores-container','eq-edit-trab-nuevo',['eq-trab-sel','eq-edit-trab-sel'])">✚ Crear</button>
+        <button type="button" class="btn btn-success btn-sm" style="white-space:nowrap;flex-shrink:0" onclick="crearYAddTrabajador('eq-edit-trabajadores-container','eq-edit-trab-nuevo')">✚ Crear</button>
       </div>
     </div>
     <div class="field" style="margin-bottom:14px;margin-top:14px"><label>Coche asignado</label><select id="eq-vehiculo-edit"><option value="">— Sin vehículo —</option></select></div>
@@ -832,6 +832,9 @@ select[multiple]{min-height:90px}
 // ══════════════════════════════════════════════════════
 // ESTADO GLOBAL
 // ══════════════════════════════════════════════════════
+const $=id=>document.getElementById(id); // atajo usado en toda la app
+// Muestra el error de la BD en un toast; devuelve true si hubo error
+function errBD(error){if(error){mostrarToast('Error: '+error.message);return true;}return false;}
 let sb = null;
 let sesionUser = null;
 let perfilUser = null; // {rol, permisos, nombre, ...}
@@ -850,15 +853,15 @@ const TITULOS = {
   admin:'Administración <em>de Usuarios</em>'
 };
 
-document.getElementById('dateChip').textContent = new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
-document.getElementById('ruta-hoy-fecha').textContent = new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+$('dateChip').textContent = new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+$('ruta-hoy-fecha').textContent = new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
 // ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
 function mostrarCapa(id){
   document.querySelectorAll('.layer').forEach(l=>{l.style.display='none';l.classList.remove('visible')});
-  const el=document.getElementById(id);
+  const el=$(id);
   el.style.display='flex';
   if(id==='layer-app') el.style.display='block';
 }
@@ -873,8 +876,8 @@ if(!cfgUrl||!cfgKey){
 }
 
 function guardarConfig(){
-  const url=document.getElementById('cfg-url').value.trim();
-  const key=document.getElementById('cfg-key').value.trim();
+  const url=$('cfg-url').value.trim();
+  const key=$('cfg-key').value.trim();
   if(!url||!key){mostrarToast('Completa los dos campos');return;}
   localStorage.setItem('sb_url',url);
   localStorage.setItem('sb_key',key);
@@ -907,7 +910,7 @@ async function cargarPerfil(){
   }
   perfilUser=data;
   if(data.rol==='pendiente'){
-    document.getElementById('pending-email-txt').textContent=sesionUser.email;
+    $('pending-email-txt').textContent=sesionUser.email;
     mostrarCapa('layer-pending');
     return;
   }
@@ -920,15 +923,15 @@ async function cargarPerfil(){
 // AUTH
 // ══════════════════════════════════════════════════════
 function cambiarTab(tab){
-  document.getElementById('tab-login').classList.toggle('active',tab==='login');
-  document.getElementById('tab-register').classList.toggle('active',tab==='register');
-  document.getElementById('form-login').classList.toggle('visible',tab==='login');
-  document.getElementById('form-register').classList.toggle('visible',tab==='register');
+  $('tab-login').classList.toggle('active',tab==='login');
+  $('tab-register').classList.toggle('active',tab==='register');
+  $('form-login').classList.toggle('visible',tab==='login');
+  $('form-register').classList.toggle('visible',tab==='register');
 }
 
 async function loginGoogle(){
   if(!sb){mostrarToast('Configura primero la conexión');return;}
-  const errEl=document.getElementById('login-error');
+  const errEl=$('login-error');
   errEl.classList.remove('visible');
   const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}});
   if(error){errEl.textContent=error.message;errEl.classList.add('visible');}
@@ -936,9 +939,9 @@ async function loginGoogle(){
 
 // Registro con Google: exige aceptar los términos antes de continuar
 async function registrarGoogle(){
-  const errEl=document.getElementById('reg-error');
+  const errEl=$('reg-error');
   errEl.classList.remove('visible');
-  if(!document.getElementById('reg-terms').checked){
+  if(!$('reg-terms').checked){
     errEl.textContent='Debes leer y aceptar los Términos y el Aviso Legal para continuar';
     errEl.classList.add('visible');
     return;
@@ -947,9 +950,9 @@ async function registrarGoogle(){
 }
 
 async function doLogin(){
-  const email=document.getElementById('login-email').value.trim();
-  const pass=document.getElementById('login-pass').value;
-  const errEl=document.getElementById('login-error');
+  const email=$('login-email').value.trim();
+  const pass=$('login-pass').value;
+  const errEl=$('login-error');
   errEl.classList.remove('visible');
   if(!email||!pass){errEl.textContent='Completa todos los campos';errEl.classList.add('visible');return;}
   const{error}=await sb.auth.signInWithPassword({email,password:pass});
@@ -957,14 +960,14 @@ async function doLogin(){
 }
 
 async function doRegister(){
-  const nombre=document.getElementById('reg-nombre').value.trim();
-  const email=document.getElementById('reg-email').value.trim();
-  const pass=document.getElementById('reg-pass').value;
-  const errEl=document.getElementById('reg-error');
+  const nombre=$('reg-nombre').value.trim();
+  const email=$('reg-email').value.trim();
+  const pass=$('reg-pass').value;
+  const errEl=$('reg-error');
   errEl.classList.remove('visible');
   if(!nombre||!email||!pass){errEl.textContent='Completa todos los campos';errEl.classList.add('visible');return;}
   if(pass.length<6){errEl.textContent='La contraseña debe tener al menos 6 caracteres';errEl.classList.add('visible');return;}
-  if(!document.getElementById('reg-terms').checked){errEl.textContent='Debes leer y aceptar los Términos y el Aviso Legal para continuar';errEl.classList.add('visible');return;}
+  if(!$('reg-terms').checked){errEl.textContent='Debes leer y aceptar los Términos y el Aviso Legal para continuar';errEl.classList.add('visible');return;}
   const{error}=await sb.auth.signUp({email,password:pass,options:{data:{nombre,terminos_aceptados:true,terminos_fecha:new Date().toISOString()}}});
   if(error){errEl.textContent=error.message;errEl.classList.add('visible');return;}
   mostrarToast('✓ Cuenta creada. Espera aprobación del administrador.');
@@ -988,10 +991,10 @@ function configurarApp(){
   const ini=nombre.charAt(0).toUpperCase();
   const rolLabel=esAdmin()?'Administrador':'Empleado';
 
-  document.getElementById('sb-nombre').textContent=nombre;
-  document.getElementById('sb-rol').textContent=rolLabel;
-  document.getElementById('sb-avatar').textContent=ini;
-  document.getElementById('mob-avatar').textContent=ini;
+  $('sb-nombre').textContent=nombre;
+  $('sb-rol').textContent=rolLabel;
+  $('sb-avatar').textContent=ini;
+  $('mob-avatar').textContent=ini;
 
   // Mostrar/ocultar nav items según permisos
   const navItems=[
@@ -1004,7 +1007,7 @@ function configurarApp(){
     {id:'nav-admin',mod:'admin'},
   ];
   navItems.forEach(n=>{
-    const el=document.getElementById(n.id);
+    const el=$(n.id);
     if(n.mod==='admin'){el.style.display=esAdmin()?'flex':'none';}
     else if(n.mod==='asistente'){el.style.display='flex';}
     else if(n.mod==='equipos'){el.style.display=(esAdmin()||tienePerm('equipos'))?'flex':'none';}
@@ -1029,7 +1032,7 @@ function configurarApp(){
   bnavItems.push({mod:'asistente',icon:'💬',label:'IA'});
   if(esAdmin()) bnavItems.push({mod:'admin',icon:'👑',label:'Admin'});
   const cols=bnavItems.length||1;
-  const bnav=document.getElementById('bnav-inner');
+  const bnav=$('bnav-inner');
   bnav.style.gridTemplateColumns=`repeat(${cols},1fr)`;
   bnav.innerHTML=bnavItems.map(b=>`
     <div class="bnav-item" id="bnav-${b.mod}" onclick="goTo('${b.mod}',null,this)">
@@ -1038,18 +1041,18 @@ function configurarApp(){
     </div>`).join('');
 
   // Módulo rutas: mostrar vista según rol
-  document.getElementById('rutas-admin').style.display=esAdmin()?'block':'none';
-  document.getElementById('rutas-empleado').style.display=esAdmin()?'none':'block';
+  $('rutas-admin').style.display=esAdmin()?'block':'none';
+  $('rutas-empleado').style.display=esAdmin()?'none':'block';
 
   // Botón añadir maquinaria: solo admin
-  document.getElementById('maq-add-btn').style.display=esAdmin()?'block':'none';
+  $('maq-add-btn').style.display=esAdmin()?'block':'none';
 
-  goTo(primero, document.getElementById('nav-'+primero));
+  goTo(primero, $('nav-'+primero));
   // Acceso directo desde la app instalada (?go=modulo)
   try{
     const sc=new URLSearchParams(location.search).get('go');
-    if(sc&&document.getElementById('mod-'+sc)&&(sc==='asistente'||esAdmin()||tienePerm(sc))){
-      goTo(sc, document.getElementById('nav-'+sc));
+    if(sc&&$('mod-'+sc)&&(sc==='asistente'||esAdmin()||tienePerm(sc))){
+      goTo(sc, $('nav-'+sc));
     }
   }catch(e){}
   if(typeof mostrarTerra==='function') mostrarTerra();
@@ -1062,12 +1065,12 @@ function goTo(mod,sidebarEl,bnavEl){
   document.querySelectorAll('.module').forEach(m=>m.classList.remove('visible'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bnav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('mod-'+mod)?.classList.add('visible');
+  $('mod-'+mod)?.classList.add('visible');
   if(sidebarEl)sidebarEl.classList.add('active');
   if(bnavEl)bnavEl.classList.add('active');
-  document.getElementById('bnav-'+mod)?.classList.add('active');
-  document.getElementById('nav-'+mod)?.classList.add('active');
-  const pt=document.getElementById('pageTitle');
+  $('bnav-'+mod)?.classList.add('active');
+  $('nav-'+mod)?.classList.add('active');
+  const pt=$('pageTitle');
   if(pt)pt.innerHTML=TITULOS[mod]||mod;
   if(mod==='asistente')iaInit();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -1092,10 +1095,10 @@ async function cargarTodo(){
 // ══════════════════════════════════════════════════════
 function selTipo(t){
   tipoActual=t;
-  document.getElementById('tipo-nuevo').classList.toggle('selected',t==='nuevo');
-  document.getElementById('tipo-mant').classList.toggle('selected',t==='mant');
-  document.getElementById('campos-nuevo').style.display=t==='nuevo'?'':'none';
-  document.getElementById('campos-mant').style.display=t==='mant'?'':'none';
+  $('tipo-nuevo').classList.toggle('selected',t==='nuevo');
+  $('tipo-mant').classList.toggle('selected',t==='mant');
+  $('campos-nuevo').style.display=t==='nuevo'?'':'none';
+  $('campos-mant').style.display=t==='mant'?'':'none';
 }
 
 let presupuestosData=[];
@@ -1103,17 +1106,16 @@ async function cargarPresupuestos(){
   if(!sb)return;
   const{data}=await sb.from('presupuestos').select('*').order('created_at',{ascending:false});
   if(!data)return;
-  document.getElementById('kpi-p-total').textContent=data.length;
-  document.getElementById('kpi-p-acep').textContent=data.filter(p=>p.status==='aceptado').length;
-  document.getElementById('kpi-p-pend').textContent=data.filter(p=>p.status==='pendiente').length;
+  $('kpi-p-total').textContent=data.length;
+  $('kpi-p-acep').textContent=data.filter(p=>p.status==='aceptado').length;
+  $('kpi-p-pend').textContent=data.filter(p=>p.status==='pendiente').length;
   presupuestosData=data;
-  presupuestosCache={};data.forEach(p=>presupuestosCache[p.id]=p);
   renderPresupuestos();
 }
 
 function renderPresupuestos(){
-  const lista=document.getElementById('pres-lista');
-  const q=(document.getElementById('pres-buscar')?.value||'').toLowerCase().trim();
+  const lista=$('pres-lista');
+  const q=($('pres-buscar')?.value||'').toLowerCase().trim();
   let datos=presupuestosData;
   if(q){
     datos=presupuestosData.filter(p=>{
@@ -1149,11 +1151,11 @@ function renderPresupuestos(){
 }
 
 async function generarPresupuesto(){
-  const cliente=document.getElementById('p-cliente').value||'Cliente';
-  const localidad=document.getElementById('p-localidad').value||'no especificada';
-  const metros=document.getElementById('p-metros').value||'no indicados';
-  const terreno=document.getElementById('p-terreno').value||'no especificado';
-  const desc=document.getElementById('p-desc').value||'';
+  const cliente=$('p-cliente').value||'Cliente';
+  const localidad=$('p-localidad').value||'no especificada';
+  const metros=$('p-metros').value||'no indicados';
+  const terreno=$('p-terreno').value||'no especificado';
+  const desc=$('p-desc').value||'';
   const fechaHoy=new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});
   let prompt;
   if(tipoActual==='nuevo'){
@@ -1162,7 +1164,7 @@ async function generarPresupuesto(){
 DATOS DEL PRESUPUESTO:
 Fecha: ${fechaHoy} (escribe esta fecha tal cual; NUNCA escribas marcadores como "[Fecha actual]")
 Cliente: ${cliente} | Localidad: ${localidad} | Superficie: ${metros} m² | Terreno: ${terreno}
-Estilo: ${document.getElementById('p-estilo').value} | Riego: ${document.getElementById('p-riego').value} | Urgencia: ${document.getElementById('p-urgencia').value}
+Estilo: ${$('p-estilo').value} | Riego: ${$('p-riego').value} | Urgencia: ${$('p-urgencia').value}
 Notas: ${desc}
 
 ESTRUCTURA OBLIGATORIA:
@@ -1187,8 +1189,8 @@ Si algún dato no se ha indicado, haz una estimación razonable y márcala como 
 
 DATOS DEL PRESUPUESTO:
 Fecha: ${fechaHoy} (escribe esta fecha tal cual; NUNCA escribas marcadores como "[Fecha actual]")
-Cliente: ${cliente} | Localidad: ${localidad} | Superficie: ${metros} m² | Estado actual: ${document.getElementById('p-estado').value}
-Frecuencia: ${document.getElementById('p-freq').value} | Riego: ${document.getElementById('p-riego-m').value}
+Cliente: ${cliente} | Localidad: ${localidad} | Superficie: ${metros} m² | Estado actual: ${$('p-estado').value}
+Frecuencia: ${$('p-freq').value} | Riego: ${$('p-riego-m').value}
 Notas: ${desc}
 
 ESTRUCTURA OBLIGATORIA:
@@ -1212,32 +1214,32 @@ Si algún dato no se ha indicado, haz una estimación razonable y márcala como 
 async function guardarPresupuesto(){
   if(!sb||!presupuestoActual){mostrarToast('Genera primero un presupuesto');return;}
   const{error}=await sb.from('presupuestos').insert({
-    cliente_nombre:document.getElementById('p-cliente').value||'Sin nombre',
-    cliente_localidad:document.getElementById('p-localidad').value||'',
-    tipo:tipoActual==='mant'?'mantenimiento':tipoActual, metros:parseFloat(document.getElementById('p-metros').value)||null,
-    descripcion:document.getElementById('p-desc').value||'',
+    cliente_nombre:$('p-cliente').value||'Sin nombre',
+    cliente_localidad:$('p-localidad').value||'',
+    tipo:tipoActual==='mant'?'mantenimiento':tipoActual, metros:parseFloat($('p-metros').value)||null,
+    descripcion:$('p-desc').value||'',
     contenido_ia:presupuestoActual, status:'pendiente',
     created_by:sesionUser.id
   });
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   mostrarToast('✓ Presupuesto guardado');cargarPresupuestos();
 }
 
 async function cambiarStatusPres(id,status){
   const{error}=await sb.from('presupuestos').update({status}).eq('id',id);
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   mostrarToast('✓ Estado actualizado');cargarPresupuestos();
 }
 
 // ══ VER / COPIAR / PDF PRESUPUESTOS ══
-let presupuestosCache={},presVisto=null;
+let presVisto=null;
 
 function verPresupuesto(id){
-  const p=presupuestosCache[id];
+  const p=presupuestosData.find(x=>x.id===id);
   if(!p)return;
   presVisto=p;
-  document.getElementById('vp-titulo').textContent='Presupuesto · '+(p.cliente_nombre||'');
-  document.getElementById('vp-texto').textContent=p.contenido_ia||'(Este presupuesto no tiene texto guardado)';
+  $('vp-titulo').textContent='Presupuesto · '+(p.cliente_nombre||'');
+  $('vp-texto').textContent=p.contenido_ia||'(Este presupuesto no tiene texto guardado)';
   abrirModal('modal-ver-pres');
 }
 
@@ -1294,16 +1296,16 @@ async function cargarClientes(){
   const{data}=await sb.from('clientes').select('*').order('created_at',{ascending:false});
   if(!data)return;
   todosClientes=data;
-  document.getElementById('kpi-c-total').textContent=data.length;
-  document.getElementById('kpi-c-act').textContent=data.filter(c=>c.status==='activo').length;
-  document.getElementById('kpi-c-rev').textContent=data.filter(c=>c.status==='revisar').length;
-  const sel=document.getElementById('crm-sel');
+  $('kpi-c-total').textContent=data.length;
+  $('kpi-c-act').textContent=data.filter(c=>c.status==='activo').length;
+  $('kpi-c-rev').textContent=data.filter(c=>c.status==='revisar').length;
+  const sel=$('crm-sel');
   sel.innerHTML='<option value="">— Elige un cliente —</option>'+data.map(c=>`<option value="${esc(c.id)}">${esc(c.nombre)}${c.localidad?' · '+esc(c.localidad):''}</option>`).join('');
   renderCli('todos');
 }
 
 function renderCli(filtro){
-  const list=document.getElementById('cli-list');
+  const list=$('cli-list');
   const datos=filtro==='todos'?todosClientes:todosClientes.filter(c=>c.status===filtro);
   if(!datos.length){list.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:12px 0">Sin clientes en esta categoría.</p>';return;}
   list.innerHTML=datos.map(c=>`
@@ -1329,14 +1331,14 @@ function filtrarCli(filtro,el){
 
 async function cambiarStatusCli(id,status){
   const{error}=await sb.from('clientes').update({status,updated_at:new Date().toISOString()}).eq('id',id);
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   mostrarToast('✓ Estado actualizado');cargarClientes();
 }
 
 async function eliminarCli(id){
   if(!confirm('¿Eliminar este cliente? No se puede deshacer.'))return;
   const{error}=await sb.from('clientes').delete().eq('id',id);
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   mostrarToast('✓ Cliente eliminado');cargarClientes();
 }
 
@@ -1347,54 +1349,55 @@ function editarCli(id){
   const c=todosClientes.find(x=>x.id===id);
   if(!c)return;
   editClienteId=id;
-  document.getElementById('ec-nombre').value=c.nombre||'';
-  document.getElementById('ec-localidad').value=c.localidad||'';
-  document.getElementById('ec-tel').value=c.telefono||'';
-  document.getElementById('ec-email').value=c.email||'';
-  document.getElementById('ec-tipo').value=c.tipo_servicio||'mantenimiento';
-  document.getElementById('ec-meta').value=c.meta||'';
+  $('ec-nombre').value=c.nombre||'';
+  $('ec-localidad').value=c.localidad||'';
+  $('ec-tel').value=c.telefono||'';
+  $('ec-email').value=c.email||'';
+  $('ec-tipo').value=c.tipo_servicio||'mantenimiento';
+  $('ec-meta').value=c.meta||'';
   abrirModal('modal-editar-cli');
 }
 
 async function guardarEdicionCli(){
   if(!sb||!editClienteId)return;
-  const nombre=document.getElementById('ec-nombre').value.trim();
+  const nombre=$('ec-nombre').value.trim();
   if(!nombre){mostrarToast('El nombre es obligatorio');return;}
   const{error}=await sb.from('clientes').update({
     nombre,
-    localidad:document.getElementById('ec-localidad').value.trim(),
-    telefono:document.getElementById('ec-tel').value.trim(),
-    email:document.getElementById('ec-email').value.trim()||null,
-    tipo_servicio:document.getElementById('ec-tipo').value,
-    meta:document.getElementById('ec-meta').value.trim(),
+    localidad:$('ec-localidad').value.trim(),
+    telefono:$('ec-tel').value.trim(),
+    email:$('ec-email').value.trim()||null,
+    tipo_servicio:$('ec-tipo').value,
+    meta:$('ec-meta').value.trim(),
     updated_at:new Date().toISOString()
   }).eq('id',editClienteId);
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   cerrarModal('modal-editar-cli');
   mostrarToast('✓ Cliente actualizado');
   cargarClientes();
 }
 
 async function guardarCliente(){
-  const nombre=document.getElementById('mc-nombre').value.trim();
+  const nombre=$('mc-nombre').value.trim();
   if(!nombre){mostrarToast('El nombre es obligatorio');return;}
   const{error}=await sb.from('clientes').insert({
-    nombre, localidad:document.getElementById('mc-localidad').value,
-    telefono:document.getElementById('mc-tel').value,
-    email:document.getElementById('mc-email').value.trim()||null,
-    tipo_servicio:document.getElementById('mc-tipo').value,
-    meta:document.getElementById('mc-meta').value, status:'activo'
+    nombre, localidad:$('mc-localidad').value,
+    telefono:$('mc-tel').value,
+    email:$('mc-email').value.trim()||null,
+    tipo_servicio:$('mc-tipo').value,
+    meta:$('mc-meta').value, status:'activo'
   });
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   cerrarModal('modal-cliente');mostrarToast('✓ Cliente guardado');cargarClientes();
-  ['mc-nombre','mc-localidad','mc-tel','mc-email','mc-meta'].forEach(id=>document.getElementById(id).value='');
+  ['mc-nombre','mc-localidad','mc-tel','mc-email','mc-meta'].forEach(id=>$(id).value='');
 }
 
 async function analizarCliente(){
-  const id=document.getElementById('crm-sel').value;
+  const id=$('crm-sel').value;
   if(!id){mostrarToast('Selecciona un cliente');return;}
   const c=todosClientes.find(x=>x.id===id);
-  const accion=document.getElementById('crm-accion').value;
+  if(!c){mostrarToast('Cliente no encontrado, recarga la página');return;}
+  const accion=$('crm-accion').value;
   crmClienteActual=c;
   if(crmEditando)editarAnalisis(); // salir del modo edición antes de regenerar
   mostrarCarga('crm-output','crm-texto');
@@ -1406,7 +1409,7 @@ async function analizarCliente(){
 let crmClienteActual=null,crmEditando=false;
 
 function editarAnalisis(){
-  const t=document.getElementById('crm-texto'),b=document.getElementById('crm-editar');
+  const t=$('crm-texto'),b=$('crm-editar');
   if(!crmEditando&&!t.innerText.trim()){mostrarToast('Genera primero un análisis');return;}
   crmEditando=!crmEditando;
   t.contentEditable=crmEditando;
@@ -1421,7 +1424,7 @@ function editarAnalisis(){
 
 async function guardarAnalisisBD(avisar){
   if(!sb||!crmClienteActual)return;
-  const texto=document.getElementById('crm-texto').innerText.trim();
+  const texto=$('crm-texto').innerText.trim();
   if(!texto)return;
   const{error}=await sb.from('clientes').update({ultimo_analisis:texto,updated_at:new Date().toISOString()}).eq('id',crmClienteActual.id);
   if(error){
@@ -1434,7 +1437,7 @@ async function guardarAnalisisBD(avisar){
 }
 
 function mostrarAnalisisGuardado(){
-  const id=document.getElementById('crm-sel').value;
+  const id=$('crm-sel').value;
   const c=todosClientes.find(x=>x.id===id);
   if(c&&c.ultimo_analisis){
     crmClienteActual=c;
@@ -1444,13 +1447,13 @@ function mostrarAnalisisGuardado(){
 }
 
 function enviarEmailCRM(){
-  const texto=document.getElementById('crm-texto').innerText.trim();
+  const texto=$('crm-texto').innerText.trim();
   if(!texto||!crmClienteActual){mostrarToast('Genera primero un análisis');return;}
   if(crmEditando)editarAnalisis(); // cierra el modo edición y conserva los cambios
   const email=(crmClienteActual.email||'').trim();
   if(!email){mostrarToast('⚠ '+crmClienteActual.nombre+' no tiene email registrado en la base de datos');return;}
   const asunto='Mediterraneum · Jardinería y paisajismo';
-  const cuerpo=document.getElementById('crm-texto').innerText.trim().replace(/\*\*/g,'');
+  const cuerpo=$('crm-texto').innerText.trim().replace(/\*\*/g,'');
   location.href='mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(cuerpo);
   mostrarToast('✓ Abriendo tu correo para enviar a '+email);
 }
@@ -1462,16 +1465,16 @@ async function cargarMaquinaria(){
   if(!sb)return;
   const{data}=await sb.from('maquinaria').select('*').eq('activo',true).order('nombre');
   if(!data)return;
-  document.getElementById('kpi-m-total').textContent=data.length;
-  document.getElementById('kpi-m-urg').textContent=data.filter(m=>m.alerta==='urgente').length;
-  document.getElementById('kpi-m-ok').textContent=data.filter(m=>m.alerta==='ok').length;
-  const sel=document.getElementById('maq-sel');
+  $('kpi-m-total').textContent=data.length;
+  $('kpi-m-urg').textContent=data.filter(m=>m.alerta==='urgente').length;
+  $('kpi-m-ok').textContent=data.filter(m=>m.alerta==='ok').length;
+  const sel=$('maq-sel');
   sel.innerHTML=data.map(m=>`<option value="${esc(m.id)}">${esc(m.nombre)}${m.matricula?' ('+esc(m.matricula)+')':''}</option>`).join('');
   const iconMap={vehiculo:'🚐',maquina:'🌿'};
   const aLabel={ok:'OK',pronto:'Pronto',urgente:'Urgente'};
   const pct={ok:25,pronto:65,urgente:88};
   const fill={ok:'f-ok',pronto:'f-pronto',urgente:'f-urgente'};
-  document.getElementById('maq-grid').innerHTML=data.map(m=>`
+  $('maq-grid').innerHTML=data.map(m=>`
     <div class="maq-card">
       <div class="maq-header"><div class="maq-icon">${iconMap[m.tipo]||'🔧'}</div><div class="maq-alerta a-${m.alerta}">${aLabel[m.alerta]}</div></div>
       <div class="maq-name">${esc(m.nombre)}</div>
@@ -1481,25 +1484,25 @@ async function cargarMaquinaria(){
 }
 
 async function guardarMaquina(){
-  const nombre=document.getElementById('mm-nombre').value.trim();
+  const nombre=$('mm-nombre').value.trim();
   if(!nombre){mostrarToast('El nombre es obligatorio');return;}
   const{error}=await sb.from('maquinaria').insert({
-    nombre, tipo:document.getElementById('mm-tipo').value,
-    matricula:document.getElementById('mm-mat').value||null,
-    horas_uso:parseFloat(document.getElementById('mm-horas').value)||0,
-    alerta:document.getElementById('mm-alerta').value,
-    notas:document.getElementById('mm-notas').value||null, activo:true
+    nombre, tipo:$('mm-tipo').value,
+    matricula:$('mm-mat').value||null,
+    horas_uso:parseFloat($('mm-horas').value)||0,
+    alerta:$('mm-alerta').value,
+    notas:$('mm-notas').value||null, activo:true
   });
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   cerrarModal('modal-maquina');mostrarToast('✓ Activo guardado');cargarMaquinaria();
 }
 
 async function consultarMaq(){
-  const sel=document.getElementById('maq-sel');
+  const sel=$('maq-sel');
   const nombre=sel.options[sel.selectedIndex]?.text||'Activo';
-  const horas=document.getElementById('maq-horas').value||'no indicadas';
-  const fecha=document.getElementById('maq-fecha').value||'no indicada';
-  const sintoma=document.getElementById('maq-sintoma').value||'ninguno';
+  const horas=$('maq-horas').value||'no indicadas';
+  const fecha=$('maq-fecha').value||'no indicada';
+  const sintoma=$('maq-sintoma').value||'ninguno';
   mostrarCarga('maq-output','maq-texto');
   try{const r=await callAI(`Eres técnico de maquinaria de jardín.\nActivo: ${nombre} | Horas/km: ${horas} | Último mantenimiento: ${fecha} | Síntoma: ${sintoma}\n\nIndica: estado estimado, qué revisar ahora, qué planificar próximamente, coste estimado y riesgo de avería (bajo/medio/alto).`);mostrarResultado('maq-output','maq-texto',r);}
   catch(e){mostrarResultado('maq-output','maq-texto','No se pudo generar la predicción: '+(e.message||'error de conexión con la IA.'));}
@@ -1514,7 +1517,7 @@ async function cargarRutas(){
     // Empleado: solo carga la ruta de hoy
     const hoy=new Date().toISOString().split('T')[0];
     const{data}=await sb.from('rutas').select('*').eq('fecha',hoy).order('created_at',{ascending:false}).limit(1);
-    const content=document.getElementById('ruta-hoy-content');
+    const content=$('ruta-hoy-content');
     if(!data||!data.length){
       content.innerHTML='<div class="ruta-hoy-empty"><div class="icon">🗺️</div><p>No hay ruta planificada para hoy.<br>Consulta con tu responsable.</p></div>';
     }else{
@@ -1529,10 +1532,10 @@ async function cargarRutas(){
   const{data}=await sb.from('rutas').select('*').order('created_at',{ascending:false}).limit(15);
   const{data:emps}=await sb.from('empleados').select('*').eq('activo',true);
   const hoy=new Date().toISOString().split('T')[0];
-  document.getElementById('kpi-r-total').textContent=data?.length||0;
-  document.getElementById('kpi-r-emp').textContent=emps?.length||0;
-  document.getElementById('kpi-r-hoy').textContent=data?.filter(r=>r.fecha===hoy).length||0;
-  const lista=document.getElementById('rutas-lista');
+  $('kpi-r-total').textContent=data?.length||0;
+  $('kpi-r-emp').textContent=emps?.length||0;
+  $('kpi-r-hoy').textContent=data?.filter(r=>r.fecha===hoy).length||0;
+  const lista=$('rutas-lista');
   if(!data?.length){lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:12px 0">No hay rutas guardadas aún.</p>';return;}
   const colors=['#4a7c59','#c9a84c','#7ec8a0','#e2c47a'];
   lista.innerHTML=data.map((r,i)=>`
@@ -1550,11 +1553,11 @@ async function cargarRutas(){
 }
 
 async function planificarRuta(){
-  const emp=document.getElementById('r-emp').value||'4';
-  const veh=document.getElementById('r-veh').value||'2';
-  const trab=document.getElementById('r-trabajos').value||'varios trabajos';
-  const base=document.getElementById('r-base').value||'Elche';
-  const hora=document.getElementById('r-hora').value||'07:30';
+  const emp=$('r-emp').value||'4';
+  const veh=$('r-veh').value||'2';
+  const trab=$('r-trabajos').value||'varios trabajos';
+  const base=$('r-base').value||'Elche';
+  const hora=$('r-hora').value||'07:30';
   mostrarCarga('ruta-output','ruta-texto');
   try{const r=await callAI(`Planificador de rutas para Mediterraneum (zona Alicante/Valencia/Murcia).\nEmpleados: ${emp} | Vehículos: ${veh} | Base: ${base} | Inicio: ${hora}\nTrabajos del día:\n${trab}\n\nOrganiza cuadrillas de forma óptima: asigna empleados a vehículos, orden de visitas minimizando km, horarios estimados para cada trabajo y km totales por cuadrilla. Formato estructurado y claro.`);rutaActual=r;mostrarResultado('ruta-output','ruta-texto',r);}
   catch(e){mostrarResultado('ruta-output','ruta-texto','Error de conexión.');}
@@ -1565,12 +1568,12 @@ async function guardarRuta(){
   const{error}=await sb.from('rutas').insert({
     fecha:new Date().toISOString().split('T')[0],
     cuadrilla:'Jornada del día',
-    trabajos:document.getElementById('r-trabajos').value,
-    base_salida:document.getElementById('r-base').value,
-    hora_inicio:document.getElementById('r-hora').value,
+    trabajos:$('r-trabajos').value,
+    base_salida:$('r-base').value,
+    hora_inicio:$('r-hora').value,
     plan_ia:rutaActual, created_by:sesionUser.id
   });
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   mostrarToast('✓ Ruta guardada — Los empleados ya pueden verla');cargarRutas();
 }
 
@@ -1581,10 +1584,10 @@ async function cargarUsuariosAdmin(){
   if(!sb||!esAdmin())return;
   const{data}=await sb.from('perfiles').select('*').order('created_at');
   if(!data)return;
-  document.getElementById('kpi-a-total').textContent=data.length;
-  document.getElementById('kpi-a-act').textContent=data.filter(u=>u.rol!=='pendiente'&&u.activo).length;
-  document.getElementById('kpi-a-pend').textContent=data.filter(u=>u.rol==='pendiente').length;
-  const lista=document.getElementById('admin-users-list');
+  $('kpi-a-total').textContent=data.length;
+  $('kpi-a-act').textContent=data.filter(u=>u.rol!=='pendiente'&&u.activo).length;
+  $('kpi-a-pend').textContent=data.filter(u=>u.rol==='pendiente').length;
+  const lista=$('admin-users-list');
   if(!data.length){lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px">No hay usuarios.</p>';return;}
   lista.innerHTML=data.map(u=>{
     const rolBadge=u.rol==='admin'?'s-admin':u.rol==='empleado'?'s-empleado':'s-espera';
@@ -1631,40 +1634,40 @@ async function cargarUsuariosAdmin(){
 
 async function cambiarRol(userId,rol){
   const{error}=await sb.from('perfiles').update({rol,updated_at:new Date().toISOString()}).eq('id',userId);
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   mostrarToast(`✓ Rol actualizado a ${rol}`);cargarUsuariosAdmin();
 }
 
 async function togglePermiso(userId,mod){
-  const el=document.getElementById(`pt-${userId}-${mod}`);
+  const el=$(`pt-${userId}-${mod}`);
   const{data}=await sb.from('perfiles').select('permisos').eq('id',userId).single();
   const perms=data?.permisos||{};
   perms[mod]=!perms[mod];
   const{error}=await sb.from('perfiles').update({permisos:perms,updated_at:new Date().toISOString()}).eq('id',userId);
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   el.classList.toggle('on',perms[mod]);
   mostrarToast(`✓ Permiso ${mod} ${perms[mod]?'activado':'desactivado'}`);
 }
 
 // ══════════════════════════════════════════════════════
-// API IA (función Netlify → Claude; la API key vive en el servidor)
+// API IA (función Netlify → Gemini; la API key vive en el servidor)
 // ══════════════════════════════════════════════════════
-async function callAI(prompt){
-  const systemPrompt='Eres el asistente de IA de Mediterraneum, empresa de jardines en Andalucía. Respondes siempre en español, de forma profesional y concisa. Tus respuestas son concretas y listas para usar en el negocio.';
+const SYSTEM_BASE='Eres el asistente de IA de Mediterraneum, empresa de jardines en Andalucía. Respondes siempre en español, de forma profesional y concisa. Tus respuestas son concretas y listas para usar en el negocio.';
+// Única puerta de salida hacia la IA: envía la sesión del usuario porque el
+// servidor rechaza cualquier petición sin un login válido.
+async function apiIA(system,messages){
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session)throw new Error('Sesión caducada. Vuelve a iniciar sesión.');
   const res=await fetch('/api/ai',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      system:systemPrompt,
-      messages:[{role:'user',content:prompt}]
-    })
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':localStorage.getItem('sb_key')||''},
+    body:JSON.stringify({system,messages})
   });
-  const d=await res.json();
-  if(!res.ok||d.type==='error'||d.error){
-    throw new Error(d.error?.message||d.error||('Error IA ('+res.status+')'));
-  }
+  const d=await res.json().catch(()=>({}));
+  if(!res.ok||d.type==='error'||d.error)throw new Error(d.error?.message||d.error||('Error IA ('+res.status+')'));
   return d.content?.[0]?.text||'Sin respuesta.';
 }
+function callAI(prompt){return apiIA(SYSTEM_BASE,[{role:'user',content:prompt}]);}
 
 // ══════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════
@@ -1685,9 +1688,9 @@ async function cargarEquipos(){
   if(maq)maquinariaCache=maq;
   if(trabs)trabajadoresCache=trabs;
   todosEquipos=data||[];
-  document.getElementById('kpi-eq-total').textContent=todosEquipos.length;
-  document.getElementById('kpi-eq-trab').textContent=trabajadoresCache.length;
-  document.getElementById('kpi-eq-veh').textContent=todosEquipos.filter(e=>e.vehiculo_id).length;
+  $('kpi-eq-total').textContent=todosEquipos.length;
+  $('kpi-eq-trab').textContent=trabajadoresCache.length;
+  $('kpi-eq-veh').textContent=todosEquipos.filter(e=>e.vehiculo_id).length;
   poblarSelectsEquipo();
   renderEquipos();
   renderTrabajadores();
@@ -1698,19 +1701,19 @@ function poblarSelectsEquipo(){
   const maquinas=maquinariaCache.filter(m=>m.tipo==='maquina');
   const vehOpts='<option value="">— Sin vehículo —</option>'+vehiculos.map(v=>`<option value="${esc(v.id)}">${esc(v.nombre)}${v.matricula?' ('+esc(v.matricula)+')':''}</option>`).join('');
   const maqOpts=maquinas.map(m=>`<option value="${esc(m.id)}">${esc(m.nombre)}</option>`).join('');
-  ['eq-vehiculo','eq-vehiculo-edit'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=vehOpts;});
-  ['eq-maquinaria','eq-maquinaria-edit'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=maqOpts;});
+  ['eq-vehiculo','eq-vehiculo-edit'].forEach(id=>{const el=$(id);if(el)el.innerHTML=vehOpts;});
+  ['eq-maquinaria','eq-maquinaria-edit'].forEach(id=>{const el=$(id);if(el)el.innerHTML=maqOpts;});
   poblarSelectsTrabajadores();
 }
 
 function poblarSelectsTrabajadores(){
   const opts='<option value="">— Seleccionar trabajador —</option>'+
     trabajadoresCache.map(t=>`<option value="${esc(t.id)}">${esc(t.nombre)}</option>`).join('');
-  ['eq-trab-sel','eq-edit-trab-sel'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  ['eq-trab-sel','eq-edit-trab-sel'].forEach(id=>{const el=$(id);if(el)el.innerHTML=opts;});
 }
 
 function addTrabajadorAlEquipo(containerId,selId){
-  const sel=document.getElementById(selId);
+  const sel=$(selId);
   const id=sel.value;
   const name=id?sel.options[sel.selectedIndex].text:'';
   if(!id){mostrarToast('⚠ Selecciona un trabajador de la lista');return;}
@@ -1719,48 +1722,45 @@ function addTrabajadorAlEquipo(containerId,selId){
   sel.value='';
 }
 
-async function crearYAddTrabajador(containerId,inputId,selIds){
-  const input=document.getElementById(inputId);
+// Inserta un trabajador en la BD y refresca listas y selects (lógica común)
+async function insertarTrabajador(inputId){
+  const input=$(inputId);
   const nombre=input.value.trim();
-  if(!nombre){mostrarToast('⚠ Escribe el nombre del trabajador');return;}
+  if(!nombre){mostrarToast('⚠ Escribe el nombre del trabajador');return null;}
   const{data,error}=await sb.from('trabajadores').insert({nombre,activo:true}).select().single();
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return null;
   trabajadoresCache.push(data);
   poblarSelectsTrabajadores();
-  addTrabajadorChip(containerId,data.id,data.nombre);
   renderTrabajadores();
-  document.getElementById('kpi-eq-trab').textContent=trabajadoresCache.length;
+  $('kpi-eq-trab').textContent=trabajadoresCache.length;
   input.value='';
+  return data;
+}
+
+async function crearYAddTrabajador(containerId,inputId){
+  const data=await insertarTrabajador(inputId);
+  if(!data)return;
+  addTrabajadorChip(containerId,data.id,data.nombre);
   mostrarToast('✓ Trabajador creado y añadido al equipo');
 }
 
 async function crearTrabajadorGlobal(){
-  const input=document.getElementById('trab-nuevo-global');
-  const nombre=input.value.trim();
-  if(!nombre){mostrarToast('⚠ Escribe el nombre del trabajador');return;}
-  const{data,error}=await sb.from('trabajadores').insert({nombre,activo:true}).select().single();
-  if(error){mostrarToast('Error: '+error.message);return;}
-  trabajadoresCache.push(data);
-  poblarSelectsTrabajadores();
-  renderTrabajadores();
-  document.getElementById('kpi-eq-trab').textContent=trabajadoresCache.length;
-  input.value='';
-  mostrarToast('✓ Trabajador añadido');
+  if(await insertarTrabajador('trab-nuevo-global'))mostrarToast('✓ Trabajador añadido');
 }
 
 async function eliminarTrabajador(id){
   if(!confirm('¿Eliminar este trabajador?'))return;
   const{error}=await sb.from('trabajadores').update({activo:false}).eq('id',id);
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   trabajadoresCache=trabajadoresCache.filter(t=>t.id!==id);
   poblarSelectsTrabajadores();
   renderTrabajadores();
-  document.getElementById('kpi-eq-trab').textContent=trabajadoresCache.length;
+  $('kpi-eq-trab').textContent=trabajadoresCache.length;
   mostrarToast('✓ Trabajador eliminado');
 }
 
 function addTrabajadorChip(containerId,id,name){
-  const container=document.getElementById(containerId);
+  const container=$(containerId);
   if(!container)return;
   const div=document.createElement('div');
   div.dataset.tid=id;
@@ -1785,7 +1785,7 @@ function getTrabajadoresFromContainer(containerId){
 }
 
 function renderTrabajadores(){
-  const el=document.getElementById('trabajadores-lista');
+  const el=$('trabajadores-lista');
   if(!el)return;
   if(!trabajadoresCache.length){el.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;text-align:center;padding:20px">No hay trabajadores registrados</p>';return;}
   el.innerHTML=`<div class="scroll-list">`+trabajadoresCache.map(t=>`
@@ -1802,7 +1802,7 @@ function renderTrabajadores(){
 }
 
 function renderEquipos(){
-  const el=document.getElementById('equipos-lista');
+  const el=$('equipos-lista');
   if(!el)return;
   if(!todosEquipos.length){el.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;text-align:center;padding:24px">No hay equipos creados aún</p>';return;}
   el.innerHTML=todosEquipos.map(e=>{
@@ -1829,24 +1829,24 @@ function renderEquipos(){
 }
 
 async function guardarEquipo(){
-  const nombre=document.getElementById('eq-nombre').value.trim();
+  const nombre=$('eq-nombre').value.trim();
   if(!nombre){mostrarToast('⚠ El nombre del equipo es obligatorio');return;}
   const{ids:trabIds,names:trabNames}=getTrabajadoresFromContainer('eq-trabajadores-container');
-  const maqSel=document.getElementById('eq-maquinaria');
+  const maqSel=$('eq-maquinaria');
   const maqIds=Array.from(maqSel.selectedOptions).map(o=>o.value).join(',');
   const maqNames=Array.from(maqSel.selectedOptions).map(o=>o.text).join(', ');
   const{error}=await sb.from('equipos').insert({
     nombre,trabajadores_ids:trabIds||null,trabajadores_names:trabNames||null,
-    vehiculo_id:document.getElementById('eq-vehiculo').value||null,
+    vehiculo_id:$('eq-vehiculo').value||null,
     maquinaria_ids:maqIds||null,maquinaria_names:maqNames||null,
-    zona:document.getElementById('eq-zona').value.trim()||null,activo:true
+    zona:$('eq-zona').value.trim()||null,activo:true
   });
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   mostrarToast('✓ Equipo guardado');
-  document.getElementById('eq-nombre').value='';
-  document.getElementById('eq-zona').value='';
-  document.getElementById('eq-vehiculo').value='';
-  document.getElementById('eq-trabajadores-container').innerHTML='';
+  $('eq-nombre').value='';
+  $('eq-zona').value='';
+  $('eq-vehiculo').value='';
+  $('eq-trabajadores-container').innerHTML='';
   Array.from(maqSel.options).forEach(o=>o.selected=false);
   cargarEquipos();
 }
@@ -1855,12 +1855,12 @@ function abrirEditarEquipo(id){
   const e=todosEquipos.find(x=>x.id===id);
   if(!e)return;
   equipoEditId=id;
-  document.getElementById('eq-edit-nombre').value=e.nombre||'';
-  document.getElementById('eq-edit-zona').value=e.zona||'';
-  document.getElementById('eq-vehiculo-edit').value=e.vehiculo_id||'';
+  $('eq-edit-nombre').value=e.nombre||'';
+  $('eq-edit-zona').value=e.zona||'';
+  $('eq-vehiculo-edit').value=e.vehiculo_id||'';
   const maqIds=(e.maquinaria_ids||'').split(',').filter(Boolean);
-  Array.from(document.getElementById('eq-maquinaria-edit').options).forEach(o=>o.selected=maqIds.includes(o.value));
-  const cont=document.getElementById('eq-edit-trabajadores-container');
+  Array.from($('eq-maquinaria-edit').options).forEach(o=>o.selected=maqIds.includes(o.value));
+  const cont=$('eq-edit-trabajadores-container');
   cont.innerHTML='';
   const trabIds=(e.trabajadores_ids||'').split(',').filter(Boolean);
   const trabNames=(e.trabajadores_names||'').split(',').map(n=>n.trim());
@@ -1870,26 +1870,26 @@ function abrirEditarEquipo(id){
 
 async function guardarEdicionEquipo(){
   if(!equipoEditId)return;
-  const nombre=document.getElementById('eq-edit-nombre').value.trim();
+  const nombre=$('eq-edit-nombre').value.trim();
   if(!nombre){mostrarToast('⚠ El nombre es obligatorio');return;}
   const{ids:trabIds,names:trabNames}=getTrabajadoresFromContainer('eq-edit-trabajadores-container');
-  const maqSel=document.getElementById('eq-maquinaria-edit');
+  const maqSel=$('eq-maquinaria-edit');
   const maqIds=Array.from(maqSel.selectedOptions).map(o=>o.value).join(',');
   const maqNames=Array.from(maqSel.selectedOptions).map(o=>o.text).join(', ');
   const{error}=await sb.from('equipos').update({
     nombre,trabajadores_ids:trabIds||null,trabajadores_names:trabNames||null,
-    vehiculo_id:document.getElementById('eq-vehiculo-edit').value||null,
+    vehiculo_id:$('eq-vehiculo-edit').value||null,
     maquinaria_ids:maqIds||null,maquinaria_names:maqNames||null,
-    zona:document.getElementById('eq-edit-zona').value.trim()||null,
+    zona:$('eq-edit-zona').value.trim()||null,
   }).eq('id',equipoEditId);
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   cerrarModal('modal-equipos-edit');mostrarToast('✓ Equipo actualizado');cargarEquipos();
 }
 
 async function eliminarEquipo(id){
   if(!confirm('¿Eliminar este equipo?'))return;
   const{error}=await sb.from('equipos').update({activo:false}).eq('id',id);
-  if(error){mostrarToast('Error: '+error.message);return;}
+  if(errBD(error))return;
   mostrarToast('✓ Equipo eliminado');cargarEquipos();
 }
 
@@ -1909,7 +1909,7 @@ function iaMd(t){
 }
 
 function iaAgregar(tipo,texto){
-  const msgs=document.getElementById('ia-msgs');
+  const msgs=$('ia-msgs');
   if(!msgs)return;
   const esUser=tipo==='user';
   const div=document.createElement('div');
@@ -1924,7 +1924,7 @@ function iaAgregar(tipo,texto){
 }
 
 function iaInit(){
-  const msgs=document.getElementById('ia-msgs');
+  const msgs=$('ia-msgs');
   if(msgs&&!iaConv.length&&!msgs.children.length){
     iaAgregar('ia','Hola 👋 Soy tu asistente de datos de Mediterraneum. Pregúntame cualquier cosa sobre clientes, obras, presupuestos, materiales, maquinaria o equipos y lo buscaré en la base de datos por ti.');
   }
@@ -1967,7 +1967,7 @@ async function iaConstruirSnapshot(force){
 }
 
 async function iaEnviar(){
-  const input=document.getElementById('ia-input');
+  const input=$('ia-input');
   const texto=(input.value||'').trim();
   if(!texto)return;
   input.value='';input.style.height='auto';
@@ -1975,7 +1975,7 @@ async function iaEnviar(){
   iaConv.push({role:'user',content:texto});
   // Limita el historial enviado para no crecer sin control
   if(iaConv.length>12)iaConv=iaConv.slice(-12);
-  document.getElementById('ia-typing').style.display='block';
+  $('ia-typing').style.display='block';
   try{
     const snapshot=await iaConstruirSnapshot();
     const sys='Eres el asistente interno de datos de Mediterraneum, una empresa de jardinería, piscinas y paisajismo en Andalucía. Tu función es ayudar a los empleados a encontrar datos consultando ÚNICAMENTE la información de la base de datos que te paso a continuación.\n\n'
@@ -1987,20 +1987,13 @@ async function iaEnviar(){
       +'- Si la pregunta es ambigua porque hay varias obras o clientes que coinciden, lista las opciones y pide que concrete.\n'
       +'- Para saber qué equipo o qué trabajadores están en un sitio o zona (ej. "quién trabaja en Plaza Mayor"), busca en EQUIPOS DE TRABAJO el equipo cuyo campo "zona" coincida con ese lugar, y responde con el nombre del equipo y sus trabajadores ("trabajadores_names").\n\n'
       +snapshot;
-    const res=await fetch('/api/ai',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({system:sys,messages:iaConv})
-    });
-    const d=await res.json();
-    if(!res.ok||d.type==='error'||d.error)throw new Error(d.error?.message||d.error||('Error IA ('+res.status+')'));
-    const resp=d.content?.[0]?.text||'Sin respuesta.';
+    const resp=await apiIA(sys,iaConv);
     iaConv.push({role:'assistant',content:resp});
     iaAgregar('ia',resp);
   }catch(e){
     iaAgregar('ia','⚠ No he podido consultar los datos: '+e.message);
   }finally{
-    document.getElementById('ia-typing').style.display='none';
+    $('ia-typing').style.display='none';
   }
 }
 
@@ -2009,19 +2002,19 @@ async function iaEnviar(){
 // Escapa HTML para prevenir XSS al insertar datos externos con innerHTML
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function mostrarCarga(oid,tid){
-  const o=document.getElementById(oid),t=document.getElementById(tid);
+  const o=$(oid),t=$(tid);
   o.classList.add('visible');
   t.innerHTML=`<div class="ai-loading">Generando respuesta <div class="dots"><span></span><span></span><span></span></div></div>`;
   setTimeout(()=>o.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 }
-function mostrarResultado(oid,tid,texto){document.getElementById(tid).textContent=texto;}
+function mostrarResultado(oid,tid,texto){$(tid).textContent=texto;}
 function mostrarToast(msg){
-  const t=document.getElementById('toast');
+  const t=$('toast');
   t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3200);
 }
-function abrirModal(id){document.getElementById(id).classList.add('open');}
-function cerrarModal(id){document.getElementById(id).classList.remove('open');}
+function abrirModal(id){$(id).classList.add('open');}
+function cerrarModal(id){$(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
 });
@@ -2033,11 +2026,11 @@ let swReg=null,updateMostrado=false;
 
 function mostrarUpdateBanner(){
   if(updateMostrado)return;updateMostrado=true;
-  const b=document.getElementById('update-banner');
+  const b=$('update-banner');
   if(b)b.style.display='flex';
 }
 function pwaActualizar(){
-  const b=document.getElementById('update-banner');if(b)b.style.display='none';
+  const b=$('update-banner');if(b)b.style.display='none';
   if(swReg&&swReg.waiting){swReg.waiting.postMessage({type:'SKIP_WAITING'});}
   else{location.reload();}
 }
@@ -2167,23 +2160,23 @@ const TERRA_SYSTEM=`You are Terra, virtual commercial assistant for Mediterraneu
 let tConv=[],tOpen=false;
 
 function mostrarTerra(){
-  document.getElementById("t-btn").style.display="flex";
+  $("t-btn").style.display="flex";
   setTimeout(()=>{
-    document.getElementById("t-badge").style.display="block";
-    setTimeout(()=>document.getElementById("t-badge").style.display="none",6000);
+    $("t-badge").style.display="block";
+    setTimeout(()=>$("t-badge").style.display="none",6000);
   },3000);
   if(!tConv.length)setTimeout(()=>tAgregar("terra","Hola, soy **Terra**, asistente de Mediterraneum 🌿\n\n¿En qué puedo ayudarte hoy?"),800);
 }
 
 function tToggle(){
   tOpen=!tOpen;
-  document.getElementById("t-window").classList.toggle("open",tOpen);
-  document.getElementById("t-btn").classList.toggle("open",tOpen);
-  if(tOpen){document.getElementById("t-badge").style.display="none";setTimeout(()=>document.getElementById("t-input").focus(),350);}
+  $("t-window").classList.toggle("open",tOpen);
+  $("t-btn").classList.toggle("open",tOpen);
+  if(tOpen){$("t-badge").style.display="none";setTimeout(()=>$("t-input").focus(),350);}
 }
 
 function tAgregar(tipo,texto){
-  const msgs=document.getElementById("t-msgs"),typing=document.getElementById("t-typing");
+  const msgs=$("t-msgs"),typing=$("t-typing");
   const now=new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
   const div=document.createElement("div");
   div.className="t-msg t-msg-"+tipo;
@@ -2193,7 +2186,7 @@ function tAgregar(tipo,texto){
 }
 
 function tLeadSaved(txt){
-  const msgs=document.getElementById("t-msgs"),typing=document.getElementById("t-typing");
+  const msgs=$("t-msgs"),typing=$("t-typing");
   const div=document.createElement("div");div.className="t-lead-saved";
   div.innerHTML="<span>🌿</span> "+txt;msgs.insertBefore(div,typing);msgs.scrollTop=msgs.scrollHeight;
 }
@@ -2230,28 +2223,23 @@ function tExtraerJSONs(txt){
 }
 
 async function tEnviar(){
-  const input=document.getElementById("t-input"),texto=input.value.trim();
+  const input=$("t-input"),texto=input.value.trim();
   if(!texto)return;
   input.value="";input.style.height="auto";
   tAgregar("user",texto);
   tConv.push({role:"user",content:texto});
-  document.getElementById("t-typing").classList.add("visible");
+  $("t-typing").classList.add("visible");
   try{
-    const res=await fetch("/api/ai",
-      {method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({system:TERRA_SYSTEM,messages:tConv})});
-    const data=await res.json();
-    if(!res.ok||data.type==="error")throw new Error(data.error?.message||"Error IA");
-    const respuesta=data.content?.[0]?.text||"Lo siento, inténtalo de nuevo.";
+    const respuesta=await apiIA(TERRA_SYSTEM,tConv);
     tConv.push({role:"assistant",content:respuesta});
-    document.getElementById("t-typing").classList.remove("visible");
+    $("t-typing").classList.remove("visible");
     const encontrados=tExtraerJSONs(respuesta);
     if(sb){for(const it of encontrados){if(it.json){try{await tProcesarCRM(it.json);}catch(e){}}}}
     let textoLimpio=respuesta;
     for(const it of encontrados)textoLimpio=textoLimpio.replace(it.raw,"");
     textoLimpio=textoLimpio.replace(/```(json)?/g,"").trim();
     if(textoLimpio)tAgregar("terra",textoLimpio);
-  }catch(e){document.getElementById("t-typing").classList.remove("visible");tAgregar("terra","Lo siento, ha ocurrido un error.");}
+  }catch(e){$("t-typing").classList.remove("visible");tAgregar("terra","Lo siento, ha ocurrido un error.");}
 }
 
 async function tProcesarCRM(json){
