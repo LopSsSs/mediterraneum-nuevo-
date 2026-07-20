@@ -15,6 +15,13 @@
 -- Requiere haber ejecutado antes supabase_seguridad.sql.
 -- ════════════════════════════════════════════════════════════════
 
+-- ── Rangos nuevos: amplía la restricción de roles de la tabla perfiles ──
+-- (sin esto, asignar "oficina" o "tecnico" da error de check constraint)
+
+alter table public.perfiles drop constraint if exists perfiles_rol_check;
+alter table public.perfiles add constraint perfiles_rol_check
+  check (rol in ('admin', 'empleado', 'oficina', 'tecnico', 'pendiente'));
+
 -- ── Rangos nuevos: oficina y tecnico cuentan como usuarios activos ──
 
 create or replace function public.es_activo() returns boolean

@@ -1021,7 +1021,7 @@ async function cargarPerfil(){
     // Primer acceso (p. ej. con Google): crea el perfil como pendiente de aprobación
     const meta=sesionUser.user_metadata||{};
     const nombre=meta.nombre||meta.full_name||meta.name||sesionUser.email;
-    const ins=await sb.from('perfiles').insert({id:sesionUser.id,nombre,rol:'pendiente'}).select().single();
+    const ins=await sb.from('perfiles').insert({id:sesionUser.id,nombre,email:sesionUser.email,rol:'pendiente'}).select().single();
     if(ins.error||!ins.data){ mostrarCapa('layer-auth'); return; }
     data=ins.data;
   }
