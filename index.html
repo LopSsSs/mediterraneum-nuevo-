@@ -426,6 +426,7 @@ select[multiple]{min-height:90px}
       <div class="nav-item" id="nav-rutas" onclick="goTo('rutas',this)"><div class="nav-icon">🗺️</div><div class="nav-text"><strong>Rutas y Cuadrillas</strong><span>Planificación diaria</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-equipos" onclick="goTo('equipos',this)"><div class="nav-icon">👥</div><div class="nav-text"><strong>Equipos</strong><span>Trabajadores · Flota</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-asistente" onclick="goTo('asistente',this)"><div class="nav-icon">💬</div><div class="nav-text"><strong>Asistente IA</strong><span>Consulta tus datos</span></div><div class="nav-dot"></div></div>
+      <div class="nav-item" id="nav-perfil" onclick="goTo('perfil',this)"><div class="nav-icon">👤</div><div class="nav-text"><strong>Configuración</strong><span>Mi perfil · Datos personales</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-admin" onclick="goTo('admin',this)" style="display:none"><div class="nav-icon">👑</div><div class="nav-text"><strong>Administración</strong><span>Usuarios · Permisos</span></div><div class="nav-dot"></div></div>
     </div>
     <div class="sidebar-footer">
@@ -442,7 +443,7 @@ select[multiple]{min-height:90px}
   <div class="mobile-topbar">
     <div class="mobile-logo">Mediter<span>raneum</span></div>
     <div class="mobile-user">
-      <div class="mobile-avatar" id="mob-avatar">?</div>
+      <div class="mobile-avatar" id="mob-avatar" onclick="goTo('perfil')" style="cursor:pointer" title="Mi perfil">?</div>
       <button style="background:none;border:none;color:rgba(245,240,232,.4);font-size:18px;cursor:pointer;padding:4px" onclick="doLogout()">⏻</button>
     </div>
   </div>
@@ -697,6 +698,23 @@ select[multiple]{min-height:90px}
       </div>
     </div>
 
+    <!-- ═══ MÓDULO CONFIGURACIÓN / MI PERFIL ═══ -->
+    <div class="module" id="mod-perfil">
+      <div class="card">
+        <div class="section-title"><small>Configuración</small>Mis datos personales</div>
+        <p style="color:rgba(245,240,232,.55);font-size:13px;line-height:1.55;margin:-6px 0 16px">Completa tu perfil. Estos datos solo los ve el administrador.</p>
+        <div class="form-grid">
+          <div class="field"><label>Nombre</label><input type="text" id="perfil-nombre" placeholder="Tu nombre" autocomplete="given-name"></div>
+          <div class="field"><label>Apellidos</label><input type="text" id="perfil-apellidos" placeholder="Tus apellidos" autocomplete="family-name"></div>
+          <div class="field"><label>País</label><select id="perfil-pais"><option value="">Seleccionar país...</option></select></div>
+          <div class="field"><label>Fecha de nacimiento</label><input type="date" id="perfil-fnac"></div>
+          <div class="field full"><label>Email</label><input type="text" id="perfil-email" disabled style="opacity:.55;cursor:not-allowed"></div>
+        </div>
+        <div class="divider"></div>
+        <button class="btn btn-primary" onclick="guardarMiPerfil()">💾 Guardar mis datos</button>
+      </div>
+    </div>
+
   </main>
 
   <!-- BOTTOM NAV -->
@@ -850,6 +868,7 @@ const TITULOS = {
   rutas:'Rutas <em>y Cuadrillas</em>',
   equipos:'Equipos <em>de Trabajo</em>',
   asistente:'Asistente <em>de Datos IA</em>',
+  perfil:'Configuración <em>· Mi Perfil</em>',
   admin:'Administración <em>de Usuarios</em>'
 };
 
@@ -981,6 +1000,42 @@ async function doLogout(){
 }
 
 // ══════════════════════════════════════════════════════
+// CONFIGURACIÓN · MI PERFIL
+// ══════════════════════════════════════════════════════
+const PAISES=['España','Portugal','Francia','Italia','Alemania','Reino Unido','Irlanda','Países Bajos','Bélgica','Suiza','Austria','Andorra','Marruecos','Argelia','Túnez','Argentina','Bolivia','Brasil','Chile','Colombia','Costa Rica','Cuba','Ecuador','El Salvador','Estados Unidos','Guatemala','Honduras','México','Nicaragua','Panamá','Paraguay','Perú','Puerto Rico','República Dominicana','Uruguay','Venezuela','Rumanía','Bulgaria','Polonia','Ucrania','Rusia','Grecia','Turquía','China','Japón','India','Filipinas','Pakistán','Senegal','Nigeria','Ghana','Mali','Gambia','Guinea','Otro'];
+
+function llenarFormPerfil(){
+  if(!perfilUser) return;
+  const sel=$('perfil-pais');
+  if(sel.options.length<=1){
+    PAISES.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o);});
+  }
+  $('perfil-nombre').value=perfilUser.nombre||'';
+  $('perfil-apellidos').value=perfilUser.apellidos||'';
+  sel.value=perfilUser.pais||'';
+  $('perfil-fnac').value=perfilUser.fecha_nacimiento||'';
+  $('perfil-email').value=sesionUser?.email||'';
+}
+
+async function guardarMiPerfil(){
+  const nombre=$('perfil-nombre').value.trim();
+  const apellidos=$('perfil-apellidos').value.trim();
+  const pais=$('perfil-pais').value;
+  const fnac=$('perfil-fnac').value;
+  if(!nombre){mostrarToast('El nombre es obligatorio');return;}
+  if(fnac&&new Date(fnac)>=new Date()){mostrarToast('La fecha de nacimiento no es válida');return;}
+  const{error}=await sb.from('perfiles')
+    .update({nombre,apellidos:apellidos||null,pais:pais||null,fecha_nacimiento:fnac||null,updated_at:new Date().toISOString()})
+    .eq('id',sesionUser.id);
+  if(error){mostrarToast('Error al guardar: '+error.message);return;}
+  perfilUser.nombre=nombre;perfilUser.apellidos=apellidos;perfilUser.pais=pais;perfilUser.fecha_nacimiento=fnac||null;
+  $('sb-nombre').textContent=nombre;
+  $('sb-avatar').textContent=nombre.charAt(0).toUpperCase();
+  $('mob-avatar').textContent=nombre.charAt(0).toUpperCase();
+  mostrarToast('✓ Datos guardados');
+}
+
+// ══════════════════════════════════════════════════════
 // CONFIGURAR APP SEGÚN ROL
 // ══════════════════════════════════════════════════════
 function esAdmin(){ return perfilUser?.rol==='admin'; }
@@ -1004,12 +1059,13 @@ function configurarApp(){
     {id:'nav-rutas',mod:'rutas'},
     {id:'nav-equipos',mod:'equipos'},
     {id:'nav-asistente',mod:'asistente'},
+    {id:'nav-perfil',mod:'perfil'},
     {id:'nav-admin',mod:'admin'},
   ];
   navItems.forEach(n=>{
     const el=$(n.id);
     if(n.mod==='admin'){el.style.display=esAdmin()?'flex':'none';}
-    else if(n.mod==='asistente'){el.style.display='flex';}
+    else if(n.mod==='asistente'||n.mod==='perfil'){el.style.display='flex';}
     else if(n.mod==='equipos'){el.style.display=(esAdmin()||tienePerm('equipos'))?'flex':'none';}
     else{el.style.display=tienePerm(n.mod)?'flex':'none';}
   });
@@ -1030,6 +1086,7 @@ function configurarApp(){
   if(tienePerm('rutas')) bnavItems.push({mod:'rutas',icon:'🗺️',label:'Rutas'});
   if(esAdmin()||tienePerm('equipos')) bnavItems.push({mod:'equipos',icon:'👥',label:'Equipos'});
   bnavItems.push({mod:'asistente',icon:'💬',label:'IA'});
+  bnavItems.push({mod:'perfil',icon:'👤',label:'Perfil'});
   if(esAdmin()) bnavItems.push({mod:'admin',icon:'👑',label:'Admin'});
   const cols=bnavItems.length||1;
   const bnav=$('bnav-inner');
@@ -1073,6 +1130,7 @@ function goTo(mod,sidebarEl,bnavEl){
   const pt=$('pageTitle');
   if(pt)pt.innerHTML=TITULOS[mod]||mod;
   if(mod==='asistente')iaInit();
+  if(mod==='perfil')llenarFormPerfil();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
