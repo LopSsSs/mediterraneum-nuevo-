@@ -1,4 +1,4 @@
-const CACHE = 'mediterraneum-v19';
+const CACHE = 'mediterraneum-v20';
 const FILES = [
   './index.html',
   './manifest.json',

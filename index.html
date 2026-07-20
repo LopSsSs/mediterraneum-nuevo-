@@ -101,6 +101,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .user-role{font-size:10px;color:var(--do);letter-spacing:.08em;text-transform:uppercase}
 .btn-logout{width:100%;padding:9px;background:rgba(180,60,60,.15);border:1px solid rgba(180,60,60,.25);color:#e8a0a0;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s}
 .btn-logout:hover{background:rgba(180,60,60,.25)}
+/* Partículas doradas de la barra lateral */
+.sidebar{overflow:hidden}
+.sidebar>*{position:relative;z-index:1}
+#sidebar-fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
 
 /* ══ MAIN ══ */
 .main{margin-left:260px;min-height:100vh;position:relative;z-index:1}
@@ -413,6 +417,7 @@ select[multiple]{min-height:90px}
 
   <!-- SIDEBAR -->
   <nav class="sidebar">
+    <canvas id="sidebar-fx"></canvas>
     <div class="logo">
       <div class="logo-symbol">· Suite IA ·</div>
       <div class="logo-name">Medi<span>terra</span>neum</div>
@@ -422,7 +427,7 @@ select[multiple]{min-height:90px}
       <div class="nav-label">Módulos</div>
       <div class="nav-item active" id="nav-presupuestos" onclick="goTo('presupuestos',this)"><div class="nav-icon">🌿</div><div class="nav-text"><strong>Presupuestos IA</strong><span>Nuevo jardín · Mantenimiento</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-crm" onclick="goTo('crm',this)"><div class="nav-icon">🤝</div><div class="nav-text"><strong>CRM Clientes</strong><span>Seguimiento · Alertas</span></div><div class="nav-dot"></div></div>
-      <div class="nav-item" id="nav-maquinaria" onclick="goTo('maquinaria',this)"><div class="nav-icon">⚙️</div><div class="nav-text"><strong>Maquinaria</strong><span>Vehículos · Estado</span></div><div class="nav-dot"></div></div>
+      <div class="nav-item" id="nav-maquinaria" onclick="goTo('maquinaria',this)"><div class="nav-icon">⚙️</div><div class="nav-text"><strong>Maquinaria y Almacén</strong><span>Vehículos · Stock</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-rutas" onclick="goTo('rutas',this)"><div class="nav-icon">🗺️</div><div class="nav-text"><strong>Rutas y Cuadrillas</strong><span>Planificación diaria</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-equipos" onclick="goTo('equipos',this)"><div class="nav-icon">👥</div><div class="nav-text"><strong>Equipos</strong><span>Trabajadores · Flota</span></div><div class="nav-dot"></div></div>
       <div class="nav-item" id="nav-asistente" onclick="goTo('asistente',this)"><div class="nav-icon">💬</div><div class="nav-text"><strong>Asistente IA</strong><span>Consulta tus datos</span></div><div class="nav-dot"></div></div>
@@ -470,7 +475,7 @@ select[multiple]{min-height:90px}
         </div>
         <div class="form-grid">
           <div class="field"><label>Cliente</label><input type="text" id="p-cliente" placeholder="Ej. Familia Gómez"></div>
-          <div class="field"><label>Localidad</label><input type="text" id="p-localidad" placeholder="Ej. Alicante"></div>
+          <div class="field"><label>Localidad</label><input type="text" id="p-localidad" placeholder="Ej. Málaga"></div>
           <div class="field"><label>Superficie (m²)</label><input type="number" id="p-metros" placeholder="Ej. 250" inputmode="numeric"></div>
           <div class="field"><label>Terreno</label><select id="p-terreno"><option value="">Seleccionar...</option><option>Llano sin vegetación</option><option>Con vegetación existente</option><option>Pendiente suave</option><option>Pendiente pronunciada</option><option>Mixto</option></select></div>
           <div class="field full"><label>Descripción / Necesidades</label><textarea id="p-desc" placeholder="Ej. Zona de césped, riego automático, plantas mediterráneas..."></textarea></div>
@@ -567,6 +572,16 @@ select[multiple]{min-height:90px}
         <div class="maq-grid" id="maq-grid"><div class="skeleton" style="height:120px"></div><div class="skeleton" style="height:120px"></div><div class="skeleton" style="height:120px"></div></div>
         <div id="maq-add-btn"><button class="btn btn-secondary btn-sm" onclick="abrirModal('modal-maquina')">+ Añadir activo</button></div>
       </div>
+      <div class="card">
+        <div class="section-title"><small>Inventario</small>Almacén</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:flex-end">
+          <div class="field" style="flex:2;min-width:150px"><label>Artículo</label><input type="text" id="alm-nombre" placeholder="Ej. Tepe, sacos de abono, tubería goteo..."></div>
+          <div class="field" style="flex:1;min-width:90px"><label>Cantidad</label><input type="number" id="alm-cantidad" placeholder="0" inputmode="numeric"></div>
+          <div class="field" style="flex:1;min-width:90px"><label>Metros</label><input type="number" id="alm-metros" placeholder="—" inputmode="decimal"></div>
+          <button class="btn btn-success" style="white-space:nowrap;width:auto;padding:10px 16px" onclick="crearArticuloAlmacen()">➕ Añadir</button>
+        </div>
+        <div id="almacen-lista"><div class="skeleton"></div></div>
+      </div>
       <div class="card card-gold">
         <div class="section-title"><small>Predicción IA</small>Consultar Mantenimiento</div>
         <div class="form-grid">
@@ -585,10 +600,10 @@ select[multiple]{min-height:90px}
       <!-- Vista empleado: solo ve la ruta de hoy -->
       <div id="rutas-empleado" style="display:none">
         <div class="ruta-hoy-card" id="ruta-hoy-card">
-          <div class="ruta-hoy-title">📋 Tu ruta de hoy</div>
+          <div class="ruta-hoy-title">📋 Tu ruta de la semana</div>
           <div class="ruta-hoy-fecha" id="ruta-hoy-fecha"></div>
           <div id="ruta-hoy-content">
-            <div class="ruta-hoy-empty"><div class="icon">🗺️</div><p>No hay ruta planificada para hoy.<br>Consulta con tu responsable.</p></div>
+            <div class="ruta-hoy-empty"><div class="icon">🗺️</div><p>No hay ruta planificada esta semana.<br>Consulta con tu responsable.</p></div>
           </div>
         </div>
       </div>
@@ -597,29 +612,38 @@ select[multiple]{min-height:90px}
         <div class="grid-3">
           <div class="kpi-card"><div class="kpi-label">Rutas guardadas</div><div class="kpi-val" id="kpi-r-total">—</div><div class="kpi-sub">Histórico</div></div>
           <div class="kpi-card"><div class="kpi-label">Empleados</div><div class="kpi-val" id="kpi-r-emp">—</div><div class="kpi-sub">Disponibles</div></div>
-          <div class="kpi-card"><div class="kpi-label">Hoy</div><div class="kpi-val" id="kpi-r-hoy">—</div><div class="kpi-sub">Rutas de hoy</div></div>
+          <div class="kpi-card"><div class="kpi-label">Esta semana</div><div class="kpi-val" id="kpi-r-hoy">—</div><div class="kpi-sub">Rutas vigentes</div></div>
         </div>
         <div class="grid-2">
           <div class="card">
             <div class="section-title"><small>Historial</small>Rutas guardadas</div>
-            <div id="rutas-lista"><div class="skeleton"></div><div class="skeleton"></div></div>
+            <div id="rutas-lista" style="max-height:240px;overflow-y:auto"><div class="skeleton"></div><div class="skeleton"></div></div>
           </div>
           <div class="card card-gold">
-            <div class="section-title"><small>Optimizador IA</small>Planificar Jornada</div>
+            <div class="section-title"><small>Optimizador IA</small>Planificar Semana</div>
             <div class="form-grid">
               <div class="field"><label>Empleados disponibles</label><input type="number" id="r-emp" placeholder="Ej. 4" inputmode="numeric"></div>
               <div class="field"><label>Vehículos disponibles</label><input type="number" id="r-veh" placeholder="Ej. 2" inputmode="numeric"></div>
-              <div class="field full"><label>Trabajos del día</label><textarea id="r-trabajos" placeholder="Ej. Mantenimiento Familia López en Elche, Poda Comunidad El Pinar..."></textarea></div>
-              <div class="field"><label>Base de salida</label><input type="text" id="r-base" placeholder="Ej. Elche"></div>
+              <div class="field full"><label>Trabajos de la semana</label><textarea id="r-trabajos" placeholder="Ej. Mantenimiento Familia López en Marbella, Poda Comunidad El Pinar en Mijas..."></textarea></div>
+              <div class="field"><label>Base de salida</label><input type="text" id="r-base" placeholder="Ej. Málaga"></div>
               <div class="field"><label>Hora de inicio</label><input type="time" id="r-hora" value="07:30"></div>
             </div>
             <button class="btn btn-primary" onclick="planificarRuta()">✨ Optimizar con IA</button>
             <div class="ai-output" id="ruta-output">
               <div class="ai-output-header"><span>✦</span> Plan optimizado · IA</div>
               <div class="ai-output-body" id="ruta-texto"></div>
-              <div style="margin-top:16px"><button class="btn btn-secondary btn-sm" onclick="guardarRuta()">💾 Guardar ruta del día</button></div>
+              <div style="margin-top:16px"><button class="btn btn-secondary btn-sm" onclick="guardarRuta()">💾 Guardar ruta de la semana</button></div>
             </div>
           </div>
+        </div>
+        <div class="card">
+          <div class="section-title"><small>Mapa</small>¿Dónde está cada equipo esta semana?</div>
+          <div class="form-grid">
+            <div class="field"><label>Equipo</label><select id="mapa-equipo" onchange="mapaSeleccion('equipo')"><option value="">— Selecciona equipo —</option></select></div>
+            <div class="field"><label>Trabajador</label><select id="mapa-trab" onchange="mapaSeleccion('trab')"><option value="">— Selecciona trabajador —</option></select></div>
+          </div>
+          <div id="mapa-info" style="font-size:12.5px;color:rgba(245,240,232,.55);margin-bottom:10px">Selecciona un equipo o un trabajador para ver su zona de trabajo en el mapa. Los equipos que guardes y los trabajadores que registres aparecen aquí automáticamente.</div>
+          <iframe id="mapa-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade" style="width:100%;height:340px;border:1px solid rgba(201,168,76,.25);border-radius:12px;background:rgba(20,35,20,.4);display:none"></iframe>
         </div>
       </div>
     </div>
@@ -639,7 +663,7 @@ select[multiple]{min-height:90px}
         <div class="card card-gold">
           <div class="section-title"><small>Crear nuevo</small>Equipo de trabajo</div>
           <div class="form-grid">
-            <div class="field full"><label>Nombre del equipo *</label><input type="text" id="eq-nombre" placeholder="Ej. Equipo Alicante Norte"></div>
+            <div class="field full"><label>Nombre del equipo *</label><input type="text" id="eq-nombre" placeholder="Ej. Equipo Málaga Este"></div>
             <div class="field full">
               <label>Trabajadores del equipo</label>
               <div id="eq-trabajadores-container" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px"></div>
@@ -654,7 +678,7 @@ select[multiple]{min-height:90px}
             </div>
             <div class="field full"><label>Coche asignado</label><select id="eq-vehiculo"><option value="">— Sin vehículo —</option></select></div>
             <div class="field full"><label>Maquinaria asignada <span style="font-size:10px;color:rgba(245,240,232,.4);text-transform:none;letter-spacing:0">(Ctrl+clic para varios)</span></label><select id="eq-maquinaria" multiple></select></div>
-            <div class="field full"><label>Ruta / Zona de trabajo</label><input type="text" id="eq-zona" placeholder="Ej. Plaza Mayor, Comunidades Elda y Petrer..."></div>
+            <div class="field full"><label>Ruta / Zona de trabajo</label><input type="text" id="eq-zona" placeholder="Ej. Marbella Este, urbanizaciones de Mijas..."></div>
           </div>
           <button class="btn btn-primary" onclick="guardarEquipo()">💾 Guardar equipo</button>
         </div>
@@ -864,7 +888,7 @@ let tipoActual = 'nuevo';
 const TITULOS = {
   presupuestos:'Presupuestos <em>Inteligentes</em>',
   crm:'CRM <em>de Clientes</em>',
-  maquinaria:'Maquinaria <em>y Flota</em>',
+  maquinaria:'Maquinaria <em>y Almacén</em>',
   rutas:'Rutas <em>y Cuadrillas</em>',
   equipos:'Equipos <em>de Trabajo</em>',
   asistente:'Asistente <em>de Datos IA</em>',
@@ -873,7 +897,7 @@ const TITULOS = {
 };
 
 $('dateChip').textContent = new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
-$('ruta-hoy-fecha').textContent = new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+(function(){const l=new Date();l.setDate(l.getDate()-((l.getDay()+6)%7));$('ruta-hoy-fecha').textContent='Semana del '+l.toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});})();
 
 // ══════════════════════════════════════════════════════
 // INIT
@@ -935,6 +959,61 @@ function mostrarErrorConexion(){
   }
   el.style.display='flex';
 }
+
+// ══════════════════════════════════════════════════════
+// PARTÍCULAS DORADAS · BARRA LATERAL
+// Puntos de luz dorados que flotan lentamente detrás del menú.
+// Discretas (solo 26, muy tenues) y se desactivan si el usuario
+// tiene activado "reducir movimiento" en su sistema.
+// ══════════════════════════════════════════════════════
+(function(){
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const cv=document.getElementById('sidebar-fx');
+  if(!cv)return;
+  const ctx=cv.getContext('2d');
+  let W=0,H=0;
+  const parts=[];
+  const ORO=['201,168,76','226,196,122','212,176,85','168,135,46'];
+  function nueva(desdeAbajo){
+    return{
+      x:Math.random()*W,
+      y:desdeAbajo?H+6:Math.random()*H,
+      r:.8+Math.random()*1.8,
+      vx:(Math.random()-.5)*.1,
+      vy:-(.04+Math.random()*.11),
+      c:ORO[Math.floor(Math.random()*ORO.length)],
+      a:.08+Math.random()*.3,
+      f:.5+Math.random()*1.5,
+      t:Math.random()*Math.PI*2
+    };
+  }
+  function resize(){
+    const r=cv.parentElement.getBoundingClientRect();
+    W=cv.width=Math.max(0,Math.round(r.width));
+    H=cv.height=Math.max(0,Math.round(r.height));
+    if(!parts.length&&W>0)for(let i=0;i<26;i++)parts.push(nueva(false));
+  }
+  function paso(){
+    requestAnimationFrame(paso);
+    if(document.hidden||W===0)return;
+    ctx.clearRect(0,0,W,H);
+    for(const p of parts){
+      p.x+=p.vx;p.y+=p.vy;p.t+=.008*p.f;
+      if(p.y<-8||p.x<-8||p.x>W+8)Object.assign(p,nueva(true));
+      const alpha=p.a*(.55+.45*Math.sin(p.t));
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${p.c},${alpha.toFixed(3)})`;
+      ctx.shadowColor=`rgba(${p.c},.8)`;
+      ctx.shadowBlur=6;
+      ctx.fill();
+    }
+    ctx.shadowBlur=0;
+  }
+  window.addEventListener('resize',resize);
+  resize();
+  requestAnimationFrame(paso);
+})();
 
 async function cargarPerfil(){
   let{data,error}=await sb.from('perfiles').select('*').eq('id',sesionUser.id).single();
@@ -1063,7 +1142,7 @@ function tienePerm(mod){ return esAdmin()||perfilUser?.permisos?.[mod]===true; }
 function configurarApp(){
   const nombre=perfilUser.nombre||sesionUser.email.split('@')[0];
   const ini=nombre.charAt(0).toUpperCase();
-  const rolLabel=esAdmin()?'Administrador':'Empleado';
+  const rolLabel={admin:'Administrador',oficina:'Oficina',tecnico:'Técnico',empleado:'Empleado'}[perfilUser.rol]||'Empleado';
 
   $('sb-nombre').textContent=nombre;
   $('sb-rol').textContent=rolLabel;
@@ -1160,7 +1239,7 @@ async function cargarTodo(){
   const proms=[];
   if(tienePerm('presupuestos')) proms.push(cargarPresupuestos());
   if(tienePerm('crm')) proms.push(cargarClientes());
-  if(tienePerm('maquinaria')) proms.push(cargarMaquinaria());
+  if(tienePerm('maquinaria')){proms.push(cargarMaquinaria());proms.push(cargarAlmacen());}
   if(tienePerm('rutas')) proms.push(cargarRutas());
   if(esAdmin()||tienePerm('equipos')) proms.push(cargarEquipos());
   if(esAdmin()) proms.push(cargarUsuariosAdmin());
@@ -1478,7 +1557,7 @@ async function analizarCliente(){
   crmClienteActual=c;
   if(crmEditando)editarAnalisis(); // salir del modo edición antes de regenerar
   mostrarCarga('crm-output','crm-texto');
-  try{const r=await callAI(`Actúa como gestor comercial de Mediterraneum (jardines mediterráneos, zona Alicante/Valencia/Murcia).\nCliente: ${c.nombre} | Localidad: ${c.localidad||''} | Servicio: ${c.tipo_servicio||''} | Estado: ${c.status} | Notas: ${c.meta||''}\nTarea: ${accion}\n\nSé concreto y accionable. Si la tarea es un mensaje de seguimiento, redáctalo listo para enviar por email al cliente, sin marcadores pendientes de rellenar.`);mostrarResultado('crm-output','crm-texto',r);guardarAnalisisBD(false);}
+  try{const r=await callAI(`Actúa como gestor comercial de Mediterraneum (jardines mediterráneos, opera exclusivamente en la provincia de Málaga).\nCliente: ${c.nombre} | Localidad: ${c.localidad||''} | Servicio: ${c.tipo_servicio||''} | Estado: ${c.status} | Notas: ${c.meta||''}\nTarea: ${accion}\n\nSé concreto y accionable. Si la tarea es un mensaje de seguimiento, redáctalo listo para enviar por email al cliente, sin marcadores pendientes de rellenar.`);mostrarResultado('crm-output','crm-texto',r);guardarAnalisisBD(false);}
   catch(e){mostrarResultado('crm-output','crm-texto','Error de conexión.');}
 }
 
@@ -1560,6 +1639,69 @@ async function cargarMaquinaria(){
     </div>`).join('');
 }
 
+// ══════════════════════════════════════════════════════
+// ALMACÉN
+// ══════════════════════════════════════════════════════
+async function cargarAlmacen(){
+  if(!sb)return;
+  const lista=$('almacen-lista');
+  if(!lista)return;
+  const{data,error}=await sb.from('almacen').select('*').eq('activo',true).order('nombre');
+  if(error){lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:8px 0">Ejecuta el script supabase_almacen_rangos.sql en Supabase para activar el almacén.</p>';return;}
+  if(!data?.length){lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:8px 0">Almacén vacío. Añade artículos con ➕ para llevar el control del stock.</p>';return;}
+  lista.innerHTML=data.map(a=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.15);border-radius:10px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="flex:1;min-width:130px;font-size:13px;color:var(--cr)">📦 ${esc(a.nombre)}</span>
+      <span style="display:flex;align-items:center;gap:6px">
+        <button class="btn btn-secondary btn-sm" style="padding:4px 11px" onclick="ajustarAlmacen('${a.id}',-1)">−</button>
+        <span style="min-width:36px;text-align:center;font-size:14px;color:var(--dc);font-weight:600">${a.cantidad??0}</span>
+        <button class="btn btn-secondary btn-sm" style="padding:4px 11px" onclick="ajustarAlmacen('${a.id}',1)">+</button>
+        <span style="font-size:11px;color:rgba(245,240,232,.4)">uds</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:5px">
+        <input type="number" value="${a.metros??''}" placeholder="—" inputmode="decimal" onchange="actualizarMetrosAlmacen('${a.id}',this.value)"
+          style="width:74px;padding:6px 8px;background:rgba(255,255,255,.05);border:1px solid rgba(201,168,76,.2);border-radius:8px;color:var(--cr);font-family:'DM Sans',sans-serif;font-size:13px;text-align:right;outline:none">
+        <span style="font-size:11px;color:rgba(245,240,232,.4)">m</span>
+      </span>
+      <button class="btn btn-danger btn-sm" style="padding:4px 10px" onclick="eliminarArticuloAlmacen('${a.id}')">✕</button>
+    </div>`).join('');
+}
+
+async function crearArticuloAlmacen(){
+  const nombre=$('alm-nombre').value.trim();
+  if(!nombre){mostrarToast('Escribe el nombre del artículo');return;}
+  const cantidad=parseFloat($('alm-cantidad').value)||0;
+  const metros=$('alm-metros').value===''?null:Math.max(0,parseFloat($('alm-metros').value)||0);
+  const{error}=await sb.from('almacen').insert({nombre,cantidad,metros,activo:true});
+  if(errBD(error))return;
+  $('alm-nombre').value='';$('alm-cantidad').value='';$('alm-metros').value='';
+  mostrarToast('✓ Artículo añadido al almacén');
+  cargarAlmacen();
+}
+
+async function ajustarAlmacen(id,delta){
+  const{data}=await sb.from('almacen').select('cantidad').eq('id',id).single();
+  const nueva=Math.max(0,(parseFloat(data?.cantidad)||0)+delta);
+  const{error}=await sb.from('almacen').update({cantidad:nueva,updated_at:new Date().toISOString()}).eq('id',id);
+  if(errBD(error))return;
+  cargarAlmacen();
+}
+
+async function actualizarMetrosAlmacen(id,v){
+  const metros=v===''?null:Math.max(0,parseFloat(v)||0);
+  const{error}=await sb.from('almacen').update({metros,updated_at:new Date().toISOString()}).eq('id',id);
+  if(errBD(error))return;
+  mostrarToast('✓ Metros actualizados');
+}
+
+async function eliminarArticuloAlmacen(id){
+  if(!confirm('¿Eliminar este artículo del almacén?'))return;
+  const{error}=await sb.from('almacen').update({activo:false}).eq('id',id);
+  if(errBD(error))return;
+  mostrarToast('✓ Artículo eliminado');
+  cargarAlmacen();
+}
+
 async function guardarMaquina(){
   const nombre=$('mm-nombre').value.trim();
   if(!nombre){mostrarToast('El nombre es obligatorio');return;}
@@ -1591,16 +1733,22 @@ async function consultarMaq(){
 async function cargarRutas(){
   if(!sb)return;
   if(!esAdmin()){
-    // Empleado: solo carga la ruta de hoy
-    const hoy=new Date().toISOString().split('T')[0];
-    const{data}=await sb.from('rutas').select('*').eq('fecha',hoy).order('created_at',{ascending:false}).limit(1);
+    // Empleado: ve la última ruta semanal guardada.
+    // Se mantiene visible hasta que el admin guarde una nueva (no caduca sola).
+    const{data}=await sb.from('rutas').select('*').order('created_at',{ascending:false}).limit(1);
     const content=$('ruta-hoy-content');
     if(!data||!data.length){
-      content.innerHTML='<div class="ruta-hoy-empty"><div class="icon">🗺️</div><p>No hay ruta planificada para hoy.<br>Consulta con tu responsable.</p></div>';
+      content.innerHTML='<div class="ruta-hoy-empty"><div class="icon">🗺️</div><p>No hay ruta planificada esta semana.<br>Consulta con tu responsable.</p></div>';
     }else{
+      const r=data[0];
+      try{
+        const f=new Date((r.fecha||r.created_at.split('T')[0])+'T00:00:00');
+        const lun=new Date(f);lun.setDate(f.getDate()-((f.getDay()+6)%7));
+        $('ruta-hoy-fecha').textContent='Semana del '+lun.toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'});
+      }catch(e){}
       const div=document.createElement('div');
       div.className='ruta-hoy-content';
-      div.textContent=data[0].plan_ia||data[0].trabajos||'Sin detalles';
+      div.textContent=r.plan_ia||r.trabajos||'Sin detalles';
       content.innerHTML='';content.appendChild(div);
     }
     return;
@@ -1608,10 +1756,11 @@ async function cargarRutas(){
   // Admin: carga historial completo
   const{data}=await sb.from('rutas').select('*').order('created_at',{ascending:false}).limit(15);
   const{data:emps}=await sb.from('empleados').select('*').eq('activo',true);
-  const hoy=new Date().toISOString().split('T')[0];
+  const lunHoy=new Date();lunHoy.setDate(lunHoy.getDate()-((lunHoy.getDay()+6)%7));
+  const lunISO=lunHoy.toISOString().split('T')[0];
   $('kpi-r-total').textContent=data?.length||0;
   $('kpi-r-emp').textContent=emps?.length||0;
-  $('kpi-r-hoy').textContent=data?.filter(r=>r.fecha===hoy).length||0;
+  $('kpi-r-hoy').textContent=data?.filter(r=>r.fecha>=lunISO).length||0;
   const lista=$('rutas-lista');
   if(!data?.length){lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px;padding:12px 0">No hay rutas guardadas aún.</p>';return;}
   const colors=['#4a7c59','#c9a84c','#7ec8a0','#e2c47a'];
@@ -1619,7 +1768,7 @@ async function cargarRutas(){
     <div class="ruta-card">
       <div class="ruta-color" style="background:${colors[i%4]}"></div>
       <div class="ruta-info">
-        <div class="ruta-name">Jornada · ${new Date(r.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}</div>
+        <div class="ruta-name">Semana · ${new Date(r.created_at).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}</div>
         <div class="ruta-sub">${esc(r.base_salida)||''} · ${esc((r.trabajos||'').substring(0,60))}${(r.trabajos||'').length>60?'...':''}</div>
       </div>
       <div class="ruta-stats">
@@ -1633,10 +1782,10 @@ async function planificarRuta(){
   const emp=$('r-emp').value||'4';
   const veh=$('r-veh').value||'2';
   const trab=$('r-trabajos').value||'varios trabajos';
-  const base=$('r-base').value||'Elche';
+  const base=$('r-base').value||'Málaga';
   const hora=$('r-hora').value||'07:30';
   mostrarCarga('ruta-output','ruta-texto');
-  try{const r=await callAI(`Planificador de rutas para Mediterraneum (zona Alicante/Valencia/Murcia).\nEmpleados: ${emp} | Vehículos: ${veh} | Base: ${base} | Inicio: ${hora}\nTrabajos del día:\n${trab}\n\nOrganiza cuadrillas de forma óptima: asigna empleados a vehículos, orden de visitas minimizando km, horarios estimados para cada trabajo y km totales por cuadrilla. Formato estructurado y claro.`);rutaActual=r;mostrarResultado('ruta-output','ruta-texto',r);}
+  try{const r=await callAI(`Planificador de rutas para Mediterraneum (opera exclusivamente en la provincia de Málaga).\nEmpleados: ${emp} | Vehículos: ${veh} | Base: ${base} | Inicio diario: ${hora}\nTrabajos de la semana:\n${trab}\n\nOrganiza el plan SEMANAL de cuadrillas: reparte los trabajos entre los días de la semana (lunes a viernes), asigna empleados a vehículos, orden de visitas minimizando km, horarios estimados de cada trabajo y km totales por día y cuadrilla. Formato estructurado por días, claro y directo.`);rutaActual=r;mostrarResultado('ruta-output','ruta-texto',r);}
   catch(e){mostrarResultado('ruta-output','ruta-texto','Error de conexión.');}
 }
 
@@ -1644,14 +1793,14 @@ async function guardarRuta(){
   if(!sb||!rutaActual){mostrarToast('Genera primero una ruta');return;}
   const{error}=await sb.from('rutas').insert({
     fecha:new Date().toISOString().split('T')[0],
-    cuadrilla:'Jornada del día',
+    cuadrilla:'Semana',
     trabajos:$('r-trabajos').value,
     base_salida:$('r-base').value,
     hora_inicio:$('r-hora').value,
     plan_ia:rutaActual, created_by:sesionUser.id
   });
   if(errBD(error))return;
-  mostrarToast('✓ Ruta guardada — Los empleados ya pueden verla');cargarRutas();
+  mostrarToast('✓ Ruta semanal guardada — Los empleados ya pueden verla');cargarRutas();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1667,8 +1816,8 @@ async function cargarUsuariosAdmin(){
   const lista=$('admin-users-list');
   if(!data.length){lista.innerHTML='<p style="color:rgba(245,240,232,.4);font-size:13px">No hay usuarios.</p>';return;}
   lista.innerHTML=data.map(u=>{
-    const rolBadge=u.rol==='admin'?'s-admin':u.rol==='empleado'?'s-empleado':'s-espera';
-    const rolLabel=u.rol==='admin'?'Admin':u.rol==='empleado'?'Empleado':'Pendiente';
+    const rolBadge=u.rol==='admin'?'s-admin':u.rol==='pendiente'?'s-espera':'s-empleado';
+    const rolLabel={admin:'Admin',oficina:'Oficina',tecnico:'Técnico',empleado:'Empleado',pendiente:'Pendiente'}[u.rol]||u.rol;
     const perms=u.permisos||{};
     const isSelf=u.id===sesionUser.id;
     return `
@@ -1684,13 +1833,15 @@ async function cargarUsuariosAdmin(){
       ${!isSelf?`
       <div style="margin-bottom:14px">
         <label style="font-size:11px;letter-spacing:.12em;color:rgba(201,168,76,.7);text-transform:uppercase;display:block;margin-bottom:8px">Rol</label>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-sm ${u.rol==='admin'?'btn-success':'btn-secondary'}" onclick="cambiarRol('${u.id}','admin')">👑 Admin</button>
+          <button class="btn btn-sm ${u.rol==='oficina'?'btn-success':'btn-secondary'}" onclick="cambiarRol('${u.id}','oficina')">🏢 Oficina</button>
+          <button class="btn btn-sm ${u.rol==='tecnico'?'btn-success':'btn-secondary'}" onclick="cambiarRol('${u.id}','tecnico')">🔧 Técnico</button>
           <button class="btn btn-sm ${u.rol==='empleado'?'btn-success':'btn-secondary'}" onclick="cambiarRol('${u.id}','empleado')">👷 Empleado</button>
           <button class="btn btn-sm ${u.rol==='pendiente'?'btn-danger':'btn-secondary'}" onclick="cambiarRol('${u.id}','pendiente')">⏳ Suspender</button>
         </div>
       </div>
-      ${u.rol==='empleado'?`
+      ${['empleado','oficina','tecnico'].includes(u.rol)?`
       <div>
         <label style="font-size:11px;letter-spacing:.12em;color:rgba(201,168,76,.7);text-transform:uppercase;display:block;margin-bottom:8px">Permisos de módulos</label>
         <div class="permisos-grid">
@@ -1729,7 +1880,7 @@ async function togglePermiso(userId,mod){
 // ══════════════════════════════════════════════════════
 // API IA (función Netlify → Gemini; la API key vive en el servidor)
 // ══════════════════════════════════════════════════════
-const SYSTEM_BASE='Eres el asistente de IA de Mediterraneum, empresa de jardines en Andalucía. Respondes siempre en español, de forma profesional y concisa. Tus respuestas son concretas y listas para usar en el negocio.';
+const SYSTEM_BASE='Eres el asistente de IA de Mediterraneum, empresa de jardinería que opera exclusivamente en la provincia de Málaga (Andalucía). Respondes siempre en español, de forma profesional y concisa. Tus respuestas son concretas y listas para usar en el negocio.';
 // Única puerta de salida hacia la IA: envía la sesión del usuario porque el
 // servidor rechaza cualquier petición sin un login válido.
 async function apiIA(system,messages){
@@ -1771,6 +1922,51 @@ async function cargarEquipos(){
   poblarSelectsEquipo();
   renderEquipos();
   renderTrabajadores();
+  poblarMapaSelects();
+}
+
+// ══════════════════════════════════════════════════════
+// MAPA DE ZONAS (módulo Rutas)
+// ══════════════════════════════════════════════════════
+function poblarMapaSelects(){
+  const se=$('mapa-equipo'),st=$('mapa-trab');
+  if(!se||!st)return;
+  const vE=se.value,vT=st.value;
+  se.innerHTML='<option value="">— Selecciona equipo —</option>'+todosEquipos.map(e=>`<option value="${esc(e.id)}">${esc(e.nombre)}</option>`).join('');
+  st.innerHTML='<option value="">— Selecciona trabajador —</option>'+trabajadoresCache.map(t=>`<option value="${esc(t.id)}">${esc(t.nombre)}</option>`).join('');
+  se.value=vE;st.value=vT;
+}
+
+function mapaSeleccion(origen){
+  const se=$('mapa-equipo'),st=$('mapa-trab'),info=$('mapa-info'),frame=$('mapa-frame');
+  let eq=null,titulo='';
+  if(origen==='equipo'){
+    st.value='';
+    eq=todosEquipos.find(e=>e.id===se.value)||null;
+    titulo=eq?`Equipo «${eq.nombre}»`:'';
+  }else{
+    se.value='';
+    const tid=st.value;
+    if(tid){
+      eq=todosEquipos.find(e=>(e.trabajadores_ids||'').includes(tid))||null;
+      const tn=trabajadoresCache.find(t=>t.id===tid)?.nombre||'';
+      titulo=eq?`${tn} — equipo «${eq.nombre}»`:(tn?`${tn} no está asignado a ningún equipo todavía`:'');
+    }
+  }
+  if(!eq){
+    frame.style.display='none';frame.src='';
+    info.textContent=titulo||'Selecciona un equipo o un trabajador para ver su zona de trabajo en el mapa.';
+    return;
+  }
+  const zona=(eq.zona||'').trim();
+  if(!zona){
+    frame.style.display='none';frame.src='';
+    info.textContent=`${titulo}: sin zona asignada. Añádela editando el equipo en el módulo Equipos.`;
+    return;
+  }
+  info.textContent=`${titulo} · Zona esta semana: ${zona}`;
+  frame.src='https://www.google.com/maps?q='+encodeURIComponent(zona+', provincia de Málaga, España')+'&z=11&output=embed';
+  frame.style.display='block';
 }
 
 function poblarSelectsEquipo(){
