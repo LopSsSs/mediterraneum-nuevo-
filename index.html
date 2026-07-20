@@ -904,6 +904,9 @@ function guardarConfig(){
 }
 
 function initSupabase(url,key){
+  // Si la librería de Supabase no se pudo descargar (sin conexión),
+  // mostrar pantalla de reintento en vez de quedarse en verde
+  if(typeof supabase==='undefined'){ mostrarErrorConexion(); return; }
   try{
     sb=supabase.createClient(url,key);
     sb.auth.getSession().then(({data:{session}})=>{
@@ -914,7 +917,23 @@ function initSupabase(url,key){
       if(session){ sesionUser=session.user; cargarPerfil(); }
       else { sesionUser=null; perfilUser=null; mostrarCapa('layer-auth'); }
     });
-  }catch(e){ mostrarToast('Error de conexión'); }
+  }catch(e){ mostrarErrorConexion(); }
+}
+
+function mostrarErrorConexion(){
+  document.querySelectorAll('.layer').forEach(l=>{l.style.display='none';});
+  let el=$('layer-offline');
+  if(!el){
+    el=document.createElement('div');
+    el.id='layer-offline';
+    el.className='layer';
+    el.style.cssText='background:var(--vp);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;text-align:center';
+    el.innerHTML='<div style="font-size:42px">📡</div>'
+      +'<div style="color:var(--cr);font-size:15px;line-height:1.6">No se pudo conectar con el servidor.<br><span style="color:rgba(245,240,232,.5);font-size:13px">Comprueba tu conexión a internet y vuelve a intentarlo.</span></div>'
+      +'<button class="btn btn-primary" style="width:auto;padding:11px 28px" onclick="location.reload()">🔄 Reintentar</button>';
+    document.body.appendChild(el);
+  }
+  el.style.display='flex';
 }
 
 async function cargarPerfil(){

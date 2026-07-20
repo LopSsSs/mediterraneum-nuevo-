@@ -1,5 +1,13 @@
-const CACHE = 'mediterraneum-v17';
-const FILES = ['./index.html', './manifest.json'];
+const CACHE = 'mediterraneum-v18';
+const FILES = [
+  './index.html',
+  './manifest.json',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+];
+
+// Dominios cuyas respuestas GET se guardan en caché para poder abrir la app sin conexión.
+// OJO: no se cachea *.supabase.co (datos de la base de datos, siempre frescos).
+const CACHEABLE_HOSTS = ['cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
@@ -22,6 +30,16 @@ self.addEventListener('message', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  const cacheable = url.origin === location.origin || CACHEABLE_HOSTS.includes(url.hostname);
   // Red primero (contenido siempre fresco); si no hay conexión, usa la caché
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+  e.respondWith(
+    fetch(e.request).then(r => {
+      if (cacheable && r.ok) {
+        const copia = r.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copia)).catch(() => {});
+      }
+      return r;
+    }).catch(() => caches.match(e.request))
+  );
 });
