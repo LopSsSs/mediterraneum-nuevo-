@@ -1,8 +1,8 @@
-const CACHE = 'mediterraneum-v18';
+const CACHE = 'mediterraneum-v19';
 const FILES = [
   './index.html',
   './manifest.json',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+  './supabase.js'
 ];
 
 // Dominios cuyas respuestas GET se guardan en caché para poder abrir la app sin conexión.
